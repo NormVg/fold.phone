@@ -27,6 +27,22 @@ export const Colors = {
   },
 };
 
+// Onboarding theme colors extracted from design
+export const OnboardingColors = {
+  background: '#EDEADC',
+  primary: '#810100',
+  primaryDark: '#8D1A1A',
+  cardDark: '#181717',
+  cardLight: '#FFFFFF',
+  textDark: '#181717',
+  textMuted: '#403E3B',
+  textLight: '#FFFFFF',
+  badgeBorder: 'rgba(24, 23, 23, 0.15)',
+  badgeBackground: 'rgba(24, 23, 23, 0.1)',
+  iconBackground: 'rgba(129, 1, 0, 0.15)',
+  micBackground: 'rgba(255, 255, 255, 0.2)',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
