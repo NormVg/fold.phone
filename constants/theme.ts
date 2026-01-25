@@ -34,6 +34,7 @@ export const OnboardingColors = {
   primaryDark: '#8D1A1A',
   cardDark: '#181717',
   cardLight: '#FFFFFF',
+  cardBackground: '#FDFBF7', // Light cream for input cards
   textDark: '#181717',
   textMuted: '#403E3B',
   textLight: '#FFFFFF',

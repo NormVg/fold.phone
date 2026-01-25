@@ -1,6 +1,7 @@
 import { CaptureIcon, LockIcon } from '@/components/icons';
 import { CTAButton, FeatureCard, SpeakFreelyCard, WelcomeBadge } from '@/components/onboarding';
 import { OnboardingColors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Dimensions, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +11,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCALE = SCREEN_WIDTH / 393;
 
 export default function OnboardingScreen() {
+  const router = useRouter();
+
+  const handleStartCapturing = () => {
+    router.push('/auth');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={OnboardingColors.background} />
@@ -50,7 +57,7 @@ export default function OnboardingScreen() {
 
       {/* CTA Button */}
       <View style={styles.ctaContainer}>
-        <CTAButton onPress={() => console.log('Start Capturing pressed')} />
+        <CTAButton onPress={handleStartCapturing} />
       </View>
     </SafeAreaView>
   );
