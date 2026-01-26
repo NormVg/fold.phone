@@ -1,7 +1,12 @@
 export { ArrowIcon } from './ArrowIcon';
+export { ArrowRightIcon } from './ArrowRightIcon';
 export { AtIcon } from './AtIcon';
+export { AudioWaveIcon } from './AudioWaveIcon';
+export { BirdIcon } from './BirdIcon';
 export { CaptureIcon } from './CaptureIcon';
 export { CaptureAddIcon } from './CaptureAddIcon';
+export { DropletIcon } from './DropletIcon';
+export { FlameIcon } from './FlameIcon';
 export { FolderIcon } from './FolderIcon';
 export { GoogleIcon } from './GoogleIcon';
 export { GridIcon } from './GridIcon';

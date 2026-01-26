@@ -7,6 +7,7 @@ const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
 
 interface ProfileAvatarProps {
   imageSource?: any;
+  size?: number; // Outer diameter, defaults to 124 * SCALE
 }
 
 /**
@@ -20,11 +21,12 @@ interface ProfileAvatarProps {
  */
 export function ProfileAvatar({ 
   imageSource,
+  size,
 }: ProfileAvatarProps) {
-  // Exact sizes from SVG
-  const outerRadius = 62 * SCALE; // r=62
-  const innerRadius = 50 * SCALE; // r=50.5 (using 50 for image)
-  const outerDiameter = outerRadius * 2;
+  // If size provided, calculate from that; otherwise use SVG defaults
+  const outerDiameter = size || 124 * SCALE;
+  const outerRadius = outerDiameter / 2;
+  const innerRadius = (outerDiameter * 50 / 62) / 2; // Maintain SVG ratio
   const innerDiameter = innerRadius * 2;
 
   return (

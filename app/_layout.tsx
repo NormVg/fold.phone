@@ -20,6 +20,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded] = useFonts({
     'SignPainter': require('../assets/fonts/SignPainterHouseScript.ttf'),
+    'JockeyOne': require('../assets/fonts/JockeyOne-Regular.ttf'),
   });
 
   useEffect(() => {
