@@ -44,6 +44,22 @@ export const OnboardingColors = {
   micBackground: 'rgba(255, 255, 255, 0.2)',
 };
 
+// Timeline/Home screen colors extracted from home:timeline.svg
+export const TimelineColors = {
+  background: '#EDEADC',
+  primary: '#810100',
+  textDark: '#181717', // Dark black shade for date text
+  navBarBackground: '#F4F2E8',
+  navBarStroke: '#810100',
+  captureButtonBackground: '#FDFBF7',
+  avatarBackground: '#D9D9D9',
+  avatarStroke: '#7F0000',
+  timelineMarker: '#810100',
+};
+
+// Golden ratio for proportional design
+export const GOLDEN_RATIO = 1.618;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

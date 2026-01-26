@@ -27,6 +27,7 @@ export default function AuthScreen() {
   const handleEnterFold = () => {
     Keyboard.dismiss();
     console.log('Enter Fold pressed', { email, password });
+    router.replace('/(tabs)' as any);
   };
 
   const handleGoogleSignIn = () => {
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 48 * SCALE,
-    fontWeight: 'bold',
+    fontFamily: 'SignPainter',
     textAlign: 'center',
     marginTop: 20 * SCALE,
     color: 'black',
