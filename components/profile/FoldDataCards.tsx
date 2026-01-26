@@ -1,34 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
 
-// Card dimensions from SVG: 171x144 each
-// Left card at x=4, Right card at x=191 (gap = 191-4-171 = 16)
 const CARD_WIDTH = 171 * SCALE;
 const CARD_HEIGHT = 144 * SCALE;
 const GAP = 16 * SCALE;
 
 interface FoldDataCardsProps {
-  streakDays: number;
+  streakDays?: number;
   isStreakActive?: boolean;
-  audioMinutes: number;
+  audioMinutes?: number;
 }
 
-/**
- * FoldDataCards - Two side-by-side cards showing streak and audio data
- * Based on home:profile:folddata.svg (exact measurements)
- * 
- * SVG Analysis:
- * - Left card: rect x=4 y=2 width=171 height=144 rx=20
- * - Right card: rect x=191 y=2 width=171 height=144 rx=20
- * - Active badge: rect x=19 y=29 width=48 height=19 rx=9.5
- * - Droplet icon circle: cx=141 cy=39 r=20 (right side of left card)
- * - Audio icon circle: cx=329.36 cy=38.36 r=19.36
- * - "8Days" uses JockeyOne font, "43m" uses regular weight
- */
 export function FoldDataCards({ 
   streakDays = 8,
   isStreakActive = true,
@@ -36,64 +22,64 @@ export function FoldDataCards({
 }: FoldDataCardsProps) {
   return (
     <View style={styles.container}>
-      {/* Streak Card (Left) */}
+      {/* Streak Card */}
       <View style={styles.card}>
-        {/* Top row: Active badge on left, droplet icon on right */}
         <View style={styles.topRow}>
           {isStreakActive && (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>ACTIVE</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>ACTIVE</Text>
             </View>
           )}
           <View style={styles.iconCircle}>
-            <DropletIcon size={24 * SCALE} color="#810100" />
+            <FireIcon />
           </View>
         </View>
-        
-        {/* Value - "8Days" in JockeyOne font */}
-        <Text style={styles.valueTextJockey}>{streakDays}Days</Text>
-        
-        {/* Label - "FOLD STREAK" */}
-        <Text style={styles.labelText}>FOLD STREAK</Text>
+        <View>
+          <Text style={styles.value}>{streakDays}Days</Text>
+          <Text style={styles.label}>FOLD STREAK</Text>
+        </View>
       </View>
-      
-      {/* Audio Logged Card (Right) */}
+
+      {/* Audio Card */}
       <View style={styles.card}>
-        {/* Top row: Audio wave icon on right */}
-        <View style={styles.topRowRight}>
+        <View style={styles.topRowEnd}>
           <View style={styles.iconCircle}>
-            <AudioWaveIcon size={24 * SCALE} color="#810100" />
+            <VoiceIcon />
           </View>
         </View>
-        
-        {/* Value - "43m" in regular font weight */}
-        <Text style={styles.valueTextRegular}>{audioMinutes}m</Text>
-        
-        {/* Label - "AUDIO LOGGED" */}
-        <Text style={styles.labelText}>AUDIO LOGGED</Text>
+        <View>
+          <Text style={styles.value}>{audioMinutes}m</Text>
+          <Text style={styles.label}>AUDIO LOGGED</Text>
+        </View>
       </View>
     </View>
   );
 }
 
 /**
- * Droplet/Water icon for streak card
- * Based on SVG path from folddata.svg
+ * Fire icon - Outline style to match design
+ * Flame shape with inner shine curve
  */
-function DropletIcon({ size = 24, color = '#810100' }: { size?: number; color?: string }) {
+function FireIcon() {
+  const size = 22 * SCALE;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Flame outline */}
       <Path
-        d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"
-        fill={color}
-        fillOpacity={0.2}
-      />
-      <Path
-        d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"
-        stroke={color}
-        strokeWidth={1.5}
+        d="M12 2C12 2 7 8 7 13C7 16.5 9 19 12 19C15 19 17 16.5 17 13C17 8 12 2 12 2Z"
+        stroke="#810100"
+        strokeWidth={1.6}
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Inner shine/curve */}
+      <Path
+        d="M9.5 13C9.5 11.5 10.5 10 12 9"
+        stroke="#810100"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        strokeOpacity={0.6}
         fill="none"
       />
     </Svg>
@@ -101,32 +87,17 @@ function DropletIcon({ size = 24, color = '#810100' }: { size?: number; color?: 
 }
 
 /**
- * Audio wave icon with vertical bars
- * Based on SVG paths from folddata.svg
+ * Voice/Audio icon - Exact from provided SVG
+ * Original viewBox: 0 0 20 23
  */
-function AudioWaveIcon({ size = 24, color = '#810100' }: { size?: number; color?: string }) {
-  const barWidth = size * 0.08;
-  const gap = size * 0.12;
-  const centerX = size / 2;
-  const heights = [0.3, 0.5, 0.7, 0.5, 0.3]; // Relative heights for 5 bars
-  
+function VoiceIcon() {
+  const size = 20 * SCALE;
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" fill={color} fillOpacity={0.2} />
-      {heights.map((h, i) => {
-        const barHeight = size * h * 0.5;
-        const x = centerX + (i - 2) * (barWidth + gap) - barWidth / 2;
-        const y = (size - barHeight) / 2;
-        return (
-          <Path
-            key={i}
-            d={`M${x} ${y + barHeight}V${y}`}
-            stroke={color}
-            strokeWidth={barWidth}
-            strokeLinecap="round"
-          />
-        );
-      })}
+    <Svg width={size} height={size * (23/20)} viewBox="0 0 20 23" fill="none">
+      <Path
+        d="M10.469 0.747801V3.7389C10.469 3.9372 10.39 4.1274 10.25 4.2677C10.11 4.4079 9.92001 4.4867 9.72101 4.4867C9.52301 4.4867 9.33299 4.4079 9.19199 4.2677C9.05199 4.1274 8.97299 3.9372 8.97299 3.7389V0.747801C8.97299 0.549501 9.05199 0.3592 9.19199 0.219C9.33299 0.0787999 9.52301 0 9.72101 0C9.92001 0 10.11 0.0787999 10.25 0.219C10.39 0.3592 10.469 0.549501 10.469 0.747801ZM14.208 4.4867C14.01 4.4867 13.819 4.5655 13.679 4.7057C13.539 4.8459 13.46 5.0361 13.46 5.2345V8.2256C13.46 8.4239 13.539 8.6141 13.679 8.7543C13.819 8.8946 14.01 8.9734 14.208 8.9734C14.406 8.9734 14.596 8.8946 14.737 8.7543C14.877 8.6141 14.956 8.4239 14.956 8.2256V5.2345C14.956 5.0361 14.877 4.8459 14.737 4.7057C14.596 4.5655 14.406 4.4867 14.208 4.4867ZM9.72101 17.9467C9.52301 17.9467 9.33299 18.0255 9.19199 18.1657C9.05199 18.306 8.97299 18.4962 8.97299 18.6945V21.6856C8.97299 21.8839 9.05199 22.0741 9.19199 22.2144C9.33299 22.3546 9.52301 22.4334 9.72101 22.4334C9.92001 22.4334 10.11 22.3546 10.25 22.2144C10.39 22.0741 10.469 21.8839 10.469 21.6856V18.6945C10.469 18.4962 10.39 18.306 10.25 18.1657C10.11 18.0255 9.92001 17.9467 9.72101 17.9467ZM9.72101 6.73C9.52301 6.73 9.33299 6.8088 9.19199 6.949C9.05199 7.0893 8.97299 7.2795 8.97299 7.4778V14.9556C8.97299 15.1539 9.05199 15.3441 9.19199 15.4844C9.33299 15.6246 9.52301 15.7034 9.72101 15.7034C9.92001 15.7034 10.11 15.6246 10.25 15.4844C10.39 15.3441 10.469 15.1539 10.469 14.9556V7.4778C10.469 7.2795 10.39 7.0893 10.25 6.949C10.11 6.8088 9.92001 6.73 9.72101 6.73ZM5.23499 4.4867C5.03599 4.4867 4.84599 4.5655 4.70599 4.7057C4.56599 4.8459 4.487 5.0361 4.487 5.2345V10.4689C4.487 10.6672 4.56599 10.8574 4.70599 10.9977C4.84599 11.1379 5.03599 11.2167 5.23499 11.2167C5.43299 11.2167 5.623 11.1379 5.763 10.9977C5.904 10.8574 5.98199 10.6672 5.98199 10.4689V5.2345C5.98199 5.0361 5.904 4.8459 5.763 4.7057C5.623 4.5655 5.43299 4.4867 5.23499 4.4867ZM14.208 11.2167C14.01 11.2167 13.819 11.2955 13.679 11.4357C13.539 11.576 13.46 11.7662 13.46 11.9645V17.1989C13.46 17.3973 13.539 17.5875 13.679 17.7277C13.819 17.8679 14.01 17.9467 14.208 17.9467C14.406 17.9467 14.596 17.8679 14.737 17.7277C14.877 17.5875 14.956 17.3973 14.956 17.1989V11.9645C14.956 11.7662 14.877 11.576 14.737 11.4357C14.596 11.2955 14.406 11.2167 14.208 11.2167ZM0.747986 8.9734C0.549986 8.9734 0.358994 9.0521 0.218994 9.1924C0.0789941 9.3326 0 9.5228 0 9.7211V12.7123C0 12.9106 0.0789941 13.1008 0.218994 13.241C0.358994 13.3813 0.549986 13.46 0.747986 13.46C0.945986 13.46 1.13601 13.3813 1.27701 13.241C1.41701 13.1008 1.496 12.9106 1.496 12.7123V9.7211C1.496 9.5228 1.41701 9.3326 1.27701 9.1924C1.13601 9.0521 0.945986 8.9734 0.747986 8.9734ZM5.23499 13.46C5.03599 13.46 4.84599 13.5388 4.70599 13.6791C4.56599 13.8193 4.487 14.0095 4.487 14.2078V17.1989C4.487 17.3973 4.56599 17.5875 4.70599 17.7277C4.84599 17.8679 5.03599 17.9467 5.23499 17.9467C5.43299 17.9467 5.623 17.8679 5.763 17.7277C5.904 17.5875 5.98199 17.3973 5.98199 17.1989V14.2078C5.98199 14.0095 5.904 13.8193 5.763 13.6791C5.623 13.5388 5.43299 13.46 5.23499 13.46ZM18.695 8.9734C18.496 8.9734 18.306 9.0521 18.166 9.1924C18.026 9.3326 17.947 9.5228 17.947 9.7211V12.7123C17.947 12.9106 18.026 13.1008 18.166 13.241C18.306 13.3813 18.496 13.46 18.695 13.46C18.893 13.46 19.083 13.3813 19.223 13.241C19.364 13.1008 19.442 12.9106 19.442 12.7123V9.7211C19.442 9.5228 19.364 9.3326 19.223 9.1924C19.083 9.0521 18.893 8.9734 18.695 8.9734Z"
+        fill="#810100"
+      />
     </Svg>
   );
 }
@@ -142,9 +113,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FDFBF7',
     borderRadius: 20 * SCALE,
     paddingHorizontal: 15 * SCALE,
-    paddingTop: 27 * SCALE, // Badge at y=29 from card, card starts at y=2
-    paddingBottom: 15 * SCALE,
-    // Shadow from SVG filter
+    paddingTop: 15 * SCALE,
+    paddingBottom: 18 * SCALE,
+    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -154,56 +125,48 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  topRowRight: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-  },
-  activeBadge: {
-    backgroundColor: 'rgba(129, 1, 0, 0.2)',
-    borderRadius: 9.5 * SCALE,
-    borderWidth: 1,
-    borderColor: 'rgba(129, 1, 0, 0.25)',
-    paddingHorizontal: 10 * SCALE,
-    paddingVertical: 3 * SCALE,
-    minWidth: 48 * SCALE,
     alignItems: 'center',
   },
-  activeBadgeText: {
+  topRowEnd: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: 'rgba(129, 1, 0, 0.15)',
+    borderRadius: 10 * SCALE,
+    borderWidth: 1,
+    borderColor: 'rgba(129, 1, 0, 0.25)',
+    paddingHorizontal: 12 * SCALE,
+    paddingVertical: 4 * SCALE,
+  },
+  badgeText: {
     fontSize: 10 * SCALE,
     fontWeight: '600',
     color: '#810100',
-    letterSpacing: 0.3,
   },
   iconCircle: {
     width: 40 * SCALE,
     height: 40 * SCALE,
     borderRadius: 20 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.2)',
+    backgroundColor: 'rgba(129, 1, 0, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  valueTextJockey: {
-    fontSize: 48 * SCALE,
+  bottomContent: {
+    // Bottom section with value and label
+  },
+  value: {
     fontFamily: 'JockeyOne',
-    color: '#000',
-    marginTop: 8 * SCALE,
-    lineHeight: 56 * SCALE,
-  },
-  valueTextRegular: {
     fontSize: 48 * SCALE,
-    fontWeight: '400',
     color: '#000',
-    marginTop: 8 * SCALE,
-    lineHeight: 56 * SCALE,
+    lineHeight: 52 * SCALE,
   },
-  labelText: {
+  label: {
     fontSize: 11 * SCALE,
     fontWeight: '500',
     color: 'rgba(0, 0, 0, 0.5)',
     letterSpacing: 0.5,
-    marginTop: 4 * SCALE,
+    marginTop: 2 * SCALE,
   },
 });
