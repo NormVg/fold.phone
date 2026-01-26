@@ -9,6 +9,9 @@ const CARD_WIDTH = 171 * SCALE;
 const CARD_HEIGHT = 144 * SCALE;
 const GAP = 16 * SCALE;
 
+// Equal vertical padding for balanced spacing
+const VERTICAL_PADDING = 16 * SCALE;
+
 interface FoldDataCardsProps {
   streakDays?: number;
   isStreakActive?: boolean;
@@ -99,8 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FDFBF7',
     borderRadius: 20 * SCALE,
     paddingHorizontal: 15 * SCALE,
-    paddingTop: 15 * SCALE,
-    paddingBottom: 18 * SCALE,
+    paddingVertical: VERTICAL_PADDING,
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

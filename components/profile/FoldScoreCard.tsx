@@ -19,6 +19,9 @@ const SCALE = SCREEN_WIDTH / 393;
  * - Score: JockeyOne font
  */
 
+// Equal vertical padding for balanced spacing
+const VERTICAL_PADDING = 18 * SCALE;
+
 interface FoldScoreCardProps {
   score?: number;
   percentile?: number;
@@ -140,7 +143,8 @@ const styles = StyleSheet.create({
   leftContent: {
     flex: 1,
     paddingLeft: 15 * SCALE,
-    paddingTop: 18 * SCALE,
+    paddingVertical: VERTICAL_PADDING,
+    justifyContent: 'space-between',
   },
   label: {
     fontSize: 11 * SCALE,

@@ -5,4 +5,3 @@ export { FoldDataCards } from './FoldDataCards';
 export { FoldGrid } from './FoldGrid';
 export { BadgesSection } from './BadgesSection';
 export type { ActivityLevel } from './FoldGrid';
-export type { Badge } from './BadgesSection';
