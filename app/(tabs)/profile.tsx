@@ -67,10 +67,6 @@ export default function ProfileScreen() {
     console.log('Folders pressed');
   };
 
-  const handleGridNavigation = () => {
-    console.log('Navigate to next week');
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
@@ -130,10 +126,7 @@ export default function ProfileScreen() {
         
         {/* Fold Grid (Activity heatmap) */}
         <View style={styles.cardSection}>
-          <FoldGrid 
-            activityData={MOCK_ACTIVITY_DATA}
-            onNextPress={handleGridNavigation}
-          />
+          <FoldGrid activityData={MOCK_ACTIVITY_DATA} />
         </View>
         
         {/* Badges Section */}
