@@ -1,0 +1,24 @@
+{
+    "name": "fold.phone",
+    "author": "cook",
+    "stir": true,
+    "cmd": {
+        "serve": [
+            "pnpm start"
+        ],
+        "build": [
+            "echo"
+        ],
+        "clean": [
+            "echo"
+        ]
+    },
+    "template": {
+        "name": "",
+        "category": "",
+        "date": "",
+        "author": "",
+        "stack": [],
+        "github": ""
+    }
+}
