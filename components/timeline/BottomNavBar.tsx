@@ -12,6 +12,7 @@ interface BottomNavBarProps {
   activeTab?: ActiveTab;
   onGridPress?: () => void;
   onCapturePress?: () => void;
+  onCaptureLongPress?: () => void;
   onProfilePress?: () => void;
 }
 
@@ -19,6 +20,7 @@ export function BottomNavBar({
   activeTab = 'timeline',
   onGridPress,
   onCapturePress,
+  onCaptureLongPress,
   onProfilePress,
 }: BottomNavBarProps) {
   const isHubActive = activeTab === 'hub';
@@ -46,6 +48,8 @@ export function BottomNavBar({
         <Pressable 
           style={styles.captureButton}
           onPress={onCapturePress}
+          onLongPress={onCaptureLongPress}
+          delayLongPress={300}
           accessibilityLabel="Capture"
           accessibilityRole="button"
         >
@@ -82,6 +86,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    zIndex: 100,
+    elevation: 10, // For Android
   },
   navBar: {
     width: 177 * SCALE,

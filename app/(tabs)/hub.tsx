@@ -1,4 +1,4 @@
-import { ActivityLevel, HubCalendar } from '@/components/hub';
+import { ActivityLevel, HubCalendar, HubPanelGrid } from '@/components/hub';
 import { BottomNavBar, TimelineHeader } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
@@ -10,12 +10,13 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
 
 /**
- * Hub Screen - Based on home:hub.svg and home:hub:calander.svg
+ * Hub Screen - Based on home:hub.svg, home:hub:calander.svg, and home:hub:pannel.svg
  *
  * The SVG shows:
  * - Same header as timeline (THUR + Oct 24 + avatar)
  * - Calendar component with month navigation
  * - Activity heatmap on calendar days
+ * - 2×2 panel grid (Stories, Emotions, zhare, Media)
  * - Bottom nav with grid icon highlighted
  */
 export default function HubScreen() {
@@ -92,6 +93,7 @@ export default function HubScreen() {
       <TimelineHeader
         dayOfWeek={dayOfWeek}
         date={date}
+        onProfilePress={handleProfilePress}
       />
 
       {/* Content area with calendar */}
@@ -107,6 +109,14 @@ export default function HubScreen() {
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
           onDayPress={handleDayPress}
+        />
+
+        {/* Panel grid with Stories, Emotions, zhare, Media */}
+        <HubPanelGrid
+          onStoriesPress={() => console.log('Stories pressed')}
+          onEmotionsPress={() => console.log('Emotions pressed')}
+          onSharePress={() => console.log('Share pressed')}
+          onMediaPress={() => console.log('Media pressed')}
         />
       </ScrollView>
 
@@ -132,7 +142,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 17 * SCALE,
     paddingTop: 16 * SCALE,
-    paddingBottom: 20 * SCALE,
+    paddingBottom: 140 * SCALE, // Increased to ensure bottom cards are fully visible above nav bar
     alignItems: 'center',
+    gap: 16 * SCALE,
   },
 });

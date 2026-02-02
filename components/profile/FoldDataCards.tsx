@@ -1,16 +1,40 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
 
+// Card dimensions - EXACT from SVG
 const CARD_WIDTH = 171 * SCALE;
 const CARD_HEIGHT = 144 * SCALE;
+const CARD_RADIUS = 20 * SCALE;
 const GAP = 16 * SCALE;
 
-// Equal vertical padding for balanced spacing
+// Icon circle - EXACT from SVG
+const ICON_CIRCLE_RADIUS = 20 * SCALE; // r="20" from SVG
+const ICON_CIRCLE_SIZE = ICON_CIRCLE_RADIUS * 2; // 40px diameter
+
+// Badge dimensions - EXACT from SVG
+const BADGE_WIDTH = 48 * SCALE;
+const BADGE_HEIGHT = 19 * SCALE;
+const BADGE_RADIUS = 9.5 * SCALE;
+
+// Padding - EXACT from SVG positioning
+const HORIZONTAL_PADDING = 15 * SCALE;
 const VERTICAL_PADDING = 16 * SCALE;
+
+// Colors - EXACT from SVG
+const COLORS = {
+  cardBackground: '#FDFBF7',
+  iconCircle: 'rgba(129, 1, 0, 0.2)', // fill-opacity="0.2" from SVG
+  iconColor: '#810100',
+  badgeBackground: 'rgba(129, 1, 0, 0.2)', // fill-opacity="0.2" from SVG
+  badgeBorder: 'rgba(129, 1, 0, 0.25)', // stroke-opacity="0.25" from SVG
+  badgeText: '#810100',
+  valueText: '#000',
+  labelText: 'rgba(0, 0, 0, 0.5)',
+};
 
 interface FoldDataCardsProps {
   streakDays?: number;
@@ -18,7 +42,7 @@ interface FoldDataCardsProps {
   audioMinutes?: number;
 }
 
-export function FoldDataCards({ 
+export function FoldDataCards({
   streakDays = 8,
   isStreakActive = true,
   audioMinutes = 43,
@@ -27,17 +51,20 @@ export function FoldDataCards({
     <View style={styles.container}>
       {/* Streak Card */}
       <View style={styles.card}>
-        <View style={styles.topRow}>
-          {isStreakActive && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>ACTIVE</Text>
-            </View>
-          )}
-          <View style={styles.iconCircle}>
-            <FireIcon />
+        {/* ACTIVE badge - top left, absolute positioning */}
+        {isStreakActive && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>ACTIVE</Text>
           </View>
+        )}
+
+        {/* Icon circle - top right, absolute positioning */}
+        <View style={styles.iconCircle}>
+          <FireIcon />
         </View>
-        <View>
+
+        {/* Bottom content */}
+        <View style={styles.bottomContent}>
           <Text style={styles.value}>{streakDays}Days</Text>
           <Text style={styles.label}>FOLD STREAK</Text>
         </View>
@@ -45,12 +72,13 @@ export function FoldDataCards({
 
       {/* Audio Card */}
       <View style={styles.card}>
-        <View style={styles.topRowEnd}>
-          <View style={styles.iconCircle}>
-            <VoiceIcon />
-          </View>
+        {/* Icon circle - top right, absolute positioning */}
+        <View style={styles.iconCircle}>
+          <VoiceIcon />
         </View>
-        <View>
+
+        {/* Bottom content */}
+        <View style={styles.bottomContent}>
           <Text style={styles.value}>{audioMinutes}m</Text>
           <Text style={styles.label}>AUDIO LOGGED</Text>
         </View>
@@ -99,45 +127,44 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: '#FDFBF7',
-    borderRadius: 20 * SCALE,
-    paddingHorizontal: 15 * SCALE,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: CARD_RADIUS,
+    paddingHorizontal: HORIZONTAL_PADDING,
     paddingVertical: VERTICAL_PADDING,
-    justifyContent: 'space-between',
+    position: 'relative', // Enable absolute positioning for badge and icon
+    justifyContent: 'flex-end', // Push content to bottom
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
   },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  topRowEnd: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
   badge: {
-    backgroundColor: 'rgba(129, 1, 0, 0.15)',
-    borderRadius: 10 * SCALE,
+    position: 'absolute',
+    top: 27 * SCALE, // y=29 from SVG, adjusted for card position
+    left: 15 * SCALE, // x=19 from SVG, adjusted for card position
+    width: BADGE_WIDTH,
+    height: BADGE_HEIGHT,
+    backgroundColor: COLORS.badgeBackground,
+    borderRadius: BADGE_RADIUS,
     borderWidth: 1,
-    borderColor: 'rgba(129, 1, 0, 0.25)',
-    paddingHorizontal: 12 * SCALE,
-    paddingVertical: 4 * SCALE,
+    borderColor: COLORS.badgeBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeText: {
     fontSize: 10 * SCALE,
     fontWeight: '600',
-    color: '#810100',
+    color: COLORS.badgeText,
   },
   iconCircle: {
-    width: 40 * SCALE,
-    height: 40 * SCALE,
-    borderRadius: 20 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.15)',
+    position: 'absolute',
+    top: 19 * SCALE, // cy=39 from SVG, adjusted for card position (39-20=19)
+    right: 14 * SCALE, // Positioned in top-right area
+    width: ICON_CIRCLE_SIZE,
+    height: ICON_CIRCLE_SIZE,
+    borderRadius: ICON_CIRCLE_RADIUS,
+    backgroundColor: COLORS.iconCircle,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -147,13 +174,13 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: 'JockeyOne',
     fontSize: 48 * SCALE,
-    color: '#000',
+    color: COLORS.valueText,
     lineHeight: 52 * SCALE,
   },
   label: {
     fontSize: 11 * SCALE,
     fontWeight: '500',
-    color: 'rgba(0, 0, 0, 0.5)',
+    color: COLORS.labelText,
     letterSpacing: 0.5,
     marginTop: 2 * SCALE,
   },

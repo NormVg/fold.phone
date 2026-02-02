@@ -1,6 +1,6 @@
+import { GOLDEN_RATIO, TimelineColors } from '@/constants/theme';
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
-import { TimelineColors, GOLDEN_RATIO } from '@/constants/theme';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
@@ -12,22 +12,27 @@ const DATE_FONT_SIZE = Math.round(BASE_FONT_SIZE * GOLDEN_RATIO * GOLDEN_RATIO);
 interface TimelineHeaderProps {
   dayOfWeek: string; // "THURSDAY" - full day name in caps
   date: string; // "Oct 24"
+  onProfilePress?: () => void; // Optional callback for profile navigation
 }
 
-export function TimelineHeader({ dayOfWeek, date }: TimelineHeaderProps) {
+export function TimelineHeader({ dayOfWeek, date, onProfilePress }: TimelineHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.dateContainer}>
         <Text style={styles.dayOfWeek}>{dayOfWeek}</Text>
         <Text style={styles.date}>{date}</Text>
       </View>
-      
-      <View style={styles.avatarContainer}>
-        <Image 
-          source={require('@/assets/images/pfp.png')} 
-          style={styles.avatar} 
+
+      <TouchableOpacity
+        style={styles.avatarContainer}
+        onPress={onProfilePress}
+        activeOpacity={0.8}
+      >
+        <Image
+          source={require('@/assets/images/pfp.png')}
+          style={styles.avatar}
         />
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
