@@ -1,5 +1,5 @@
 import { AuthButton, AuthInput, GoogleSignInButton, OrDivider } from '@/components/auth';
-import { AtIcon, LockIcon } from '@/components/icons';
+import { AtIcon, LockIcon, UserIcon } from '@/components/icons';
 import { OnboardingColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -19,14 +19,35 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCALE = SCREEN_WIDTH / 393;
 
-export default function AuthScreen() {
+export default function SignupScreen() {
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleEnterFold = () => {
+  const handleCreateAccount = () => {
     Keyboard.dismiss();
-    console.log('Enter Fold pressed', { email, password });
+    
+    // Basic validation
+    if (!name.trim()) {
+      console.log('Name is required');
+      return;
+    }
+    if (!email.trim()) {
+      console.log('Email is required');
+      return;
+    }
+    if (!password) {
+      console.log('Password is required');
+      return;
+    }
+    if (password !== confirmPassword) {
+      console.log('Passwords do not match');
+      return;
+    }
+    
+    console.log('Create account pressed', { name, email, password });
     router.replace('/(tabs)' as any);
   };
 
@@ -34,8 +55,8 @@ export default function AuthScreen() {
     console.log('Google sign-in pressed');
   };
 
-  const handleCreateAccount = () => {
-    router.replace('/signup' as any);
+  const handleLogin = () => {
+    router.replace('/auth');
   };
 
   return (
@@ -59,11 +80,11 @@ export default function AuthScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Fold</Text>
+          <Text style={styles.title}>Join Fold</Text>
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            The private space for you raw{'\n'}thoughts, memories, and emotions.
+            Create your private space for raw{'\n'}thoughts, memories, and emotions.
           </Text>
 
           {/* E2E Encryption Label */}
@@ -79,9 +100,18 @@ export default function AuthScreen() {
             {/* Or Divider */}
             <OrDivider />
 
+            {/* Name Input */}
+            <AuthInput
+              placeholder="Full Name"
+              icon={<UserIcon size={20 * SCALE} color="#810100" />}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+
             {/* Email Input */}
             <AuthInput
-              placeholder="Email or Username"
+              placeholder="Email"
               icon={<AtIcon size={20 * SCALE} color="#810100" />}
               value={email}
               onChangeText={setEmail}
@@ -97,17 +127,26 @@ export default function AuthScreen() {
               secureTextEntry
             />
 
-            {/* Enter Fold Button */}
+            {/* Confirm Password Input */}
+            <AuthInput
+              placeholder="Confirm Password"
+              icon={<LockIcon size={20 * SCALE} color="#810100" />}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
+
+            {/* Create Account Button */}
             <View style={styles.buttonContainer}>
-              <AuthButton title="Enter Fold" onPress={handleEnterFold} />
+              <AuthButton title="Create Account" onPress={handleCreateAccount} />
             </View>
 
             {/* Bottom Text */}
             <View style={styles.bottomSection}>
               <Text style={styles.bottomText}>
-                New here?{' '}
-                <Text style={styles.createAccountLink} onPress={handleCreateAccount}>
-                  Create Account
+                Already have an account?{' '}
+                <Text style={styles.loginLink} onPress={handleLogin}>
+                  Login
                 </Text>
               </Text>
             </View>
@@ -130,18 +169,18 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 40 * SCALE,
+    marginTop: 30 * SCALE,
   },
   logo: {
-    width: 125 * SCALE,
-    height: 125 * SCALE,
-    borderRadius: 25 * SCALE,
+    width: 100 * SCALE,
+    height: 100 * SCALE,
+    borderRadius: 20 * SCALE,
   },
   title: {
     fontSize: 48 * SCALE,
     fontFamily: 'SignPainter',
     textAlign: 'center',
-    marginTop: 20 * SCALE,
+    marginTop: 15 * SCALE,
     color: 'black',
   },
   subtitle: {
@@ -155,8 +194,8 @@ const styles = StyleSheet.create({
     fontSize: 13 * SCALE,
     textAlign: 'center',
     color: 'rgba(0, 0, 0, 0.5)',
-    marginTop: 25 * SCALE,
-    marginBottom: 25 * SCALE,
+    marginTop: 20 * SCALE,
+    marginBottom: 20 * SCALE,
   },
   inputSection: {
     marginTop: 0,
@@ -165,7 +204,7 @@ const styles = StyleSheet.create({
     marginTop: 8 * SCALE,
   },
   bottomSection: {
-    marginTop: 30 * SCALE,
+    marginTop: 25 * SCALE,
     paddingBottom: 20 * SCALE,
   },
   bottomText: {
@@ -173,7 +212,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#181717',
   },
-  createAccountLink: {
+  loginLink: {
     color: OnboardingColors.primary,
     fontWeight: '500',
   },

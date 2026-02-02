@@ -16,4 +16,5 @@ export { ProfileIcon } from './ProfileIcon';
 export { SettingsIcon } from './SettingsIcon';
 export { ShieldIcon } from './ShieldIcon';
 export { SparkleIcon } from './SparkleIcon';
+export { UserIcon } from './UserIcon';
 
