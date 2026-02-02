@@ -1,6 +1,7 @@
 import { AuthButton, AuthInput, GoogleSignInButton, OrDivider } from '@/components/auth';
 import { AtIcon, LockIcon, UserIcon } from '@/components/icons';
 import { OnboardingColors } from '@/constants/theme';
+import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -25,10 +26,11 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
     Keyboard.dismiss();
-    
+
     // Basic validation
     if (!name.trim()) {
       console.log('Name is required');
@@ -46,13 +48,39 @@ export default function SignupScreen() {
       console.log('Passwords do not match');
       return;
     }
-    
-    console.log('Create account pressed', { name, email, password });
-    router.replace('/(tabs)' as any);
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await authClient.signUp.email({
+        email,
+        password,
+        name,
+        callbackURL: '/(tabs)',
+      });
+
+      if (error) {
+        console.error('Signup error:', error.message);
+        // Handle error (e.g., show to user)
+      } else {
+        console.log('Signup successful:', data);
+        router.replace('/(tabs)' as any);
+      }
+    } catch (err) {
+      console.error('Unexpected error during signup:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleSignIn = () => {
-    console.log('Google sign-in pressed');
+  const handleGoogleSignIn = async () => {
+    try {
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: '/(tabs)',
+      });
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+    }
   };
 
   const handleLogin = () => {
