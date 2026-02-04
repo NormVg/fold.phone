@@ -119,7 +119,8 @@ export async function uploadAvatar(
     const formData = new FormData();
     const filename = uri.split("/").pop() || "avatar.jpg";
 
-    formData.append("file", {
+    // Backend expects 'avatar' key, not 'file'
+    formData.append("avatar", {
       uri,
       name: filename,
       type: mimeType,
@@ -145,8 +146,16 @@ export async function uploadAvatar(
       };
     }
 
+    // Backend returns: { data: { id, url, thumbnails: { small, medium, large } } }
+    // Use medium thumbnail for avatar, or fall back to main url
+    const uploadData = json.data ?? json;
+    const avatarUrl = uploadData.thumbnails?.medium || uploadData.url;
+
     return {
-      data: json.data ?? json,
+      data: {
+        id: uploadData.id,
+        url: avatarUrl,
+      },
       error: null,
     };
   } catch (error) {
