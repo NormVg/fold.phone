@@ -1,6 +1,6 @@
 import { OnboardingColors } from '@/constants/theme';
 import React from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GoogleIcon } from '../icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -8,15 +8,27 @@ const SCALE = SCREEN_WIDTH / 393;
 
 interface GoogleSignInButtonProps {
   onPress?: () => void;
+  disabled?: boolean;
 }
 
-export function GoogleSignInButton({ onPress }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ onPress, disabled }: GoogleSignInButtonProps) {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity 
+      style={[styles.container, disabled && styles.disabled]} 
+      onPress={onPress} 
+      activeOpacity={0.8}
+      disabled={disabled}
+    >
       <View style={styles.iconContainer}>
-        <GoogleIcon size={24 * SCALE} />
+        {disabled ? (
+          <ActivityIndicator size="small" color={OnboardingColors.primary} />
+        ) : (
+          <GoogleIcon size={24 * SCALE} />
+        )}
       </View>
-      <Text style={styles.text}>Sign in with Google</Text>
+      <Text style={styles.text}>
+        {disabled ? 'Signing in...' : 'Sign in with Google'}
+      </Text>
       {/* Empty view for centering */}
       <View style={styles.spacer} />
     </TouchableOpacity>
@@ -33,6 +45,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * SCALE,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.15)',
+  },
+  disabled: {
+    opacity: 0.7,
   },
   iconContainer: {
     width: 40 * SCALE,

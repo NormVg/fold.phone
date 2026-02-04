@@ -13,6 +13,7 @@ import {
   BadgesSection,
   ActivityLevel,
 } from '@/components/profile';
+import { useAuth } from '@/lib/auth-context';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -44,8 +45,30 @@ const MOCK_ACTIVITY_DATA: ActivityLevel[][] = [
  * - FoldGrid: at y~640
  * - Badges section: at y~970
  */
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  emailVerified: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
+  
+  // Cast auth user to our User type
+  const user = authUser as User | null;
+
+  // Format user's display name (e.g., "Vishnu's")
+  const getDisplayName = () => {
+    if (!user?.name) return "User's";
+    const firstName = user.name.split(' ')[0];
+    return `${firstName}'s`;
+  };
 
   const handleGridPress = () => {
     router.replace('/hub');
@@ -60,7 +83,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettingsPress = () => {
-    console.log('Settings pressed');
+    router.push('/settings');
   };
 
   const handleFoldersPress = () => {
@@ -93,13 +116,14 @@ export default function ProfileScreen() {
         {/* Avatar - centered, outer ring + inner image */}
         <View style={styles.avatarSection}>
           <ProfileAvatar 
-            imageSource={require('@/assets/images/pfp.png')}
+            imageUri={user?.image || undefined}
+            imageSource={!user?.image ? require('@/assets/images/pfp.png') : undefined}
             size={124 * SCALE}
           />
         </View>
         
         {/* User name - "Vishnu's" */}
-        <Text style={styles.userName}>Vishnu's</Text>
+        <Text style={styles.userName}>{getDisplayName()}</Text>
         
         {/* Private member badge - "PRIVATE MEMORY VAULT" */}
         <View style={styles.badgeSection}>

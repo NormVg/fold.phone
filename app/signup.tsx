@@ -1,10 +1,13 @@
 import { AuthButton, AuthInput, GoogleSignInButton, OrDivider } from '@/components/auth';
 import { AtIcon, LockIcon, UserIcon } from '@/components/icons';
 import { OnboardingColors } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'expo-router';
+import { maybeCompleteAuthSession } from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   Keyboard,
@@ -17,35 +20,44 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Required for web browser auth session to complete when app reopens
+maybeCompleteAuthSession();
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCALE = SCREEN_WIDTH / 393;
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { refreshAuth } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleCreateAccount = async () => {
     Keyboard.dismiss();
 
     // Basic validation
     if (!name.trim()) {
-      console.log('Name is required');
+      Alert.alert('Error', 'Name is required');
       return;
     }
     if (!email.trim()) {
-      console.log('Email is required');
+      Alert.alert('Error', 'Email is required');
       return;
     }
     if (!password) {
-      console.log('Password is required');
+      Alert.alert('Error', 'Password is required');
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
     if (password !== confirmPassword) {
-      console.log('Passwords do not match');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
@@ -55,31 +67,55 @@ export default function SignupScreen() {
         email,
         password,
         name,
-        callbackURL: '/(tabs)',
       });
 
       if (error) {
-        console.error('Signup error:', error.message);
-        // Handle error (e.g., show to user)
+        Alert.alert('Signup Failed', error.message || 'Could not create account');
       } else {
-        console.log('Signup successful:', data);
+        console.log('Signup successful:', data?.user);
+        // Refresh auth context to update state
+        await refreshAuth();
         router.replace('/(tabs)' as any);
       }
     } catch (err) {
       console.error('Unexpected error during signup:', err);
+      Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
     try {
-      await authClient.signIn.social({
+      // The expoClient plugin automatically handles:
+      // 1. Opening the browser via expo-authorization-proxy
+      // 2. Managing OAuth state
+      // 3. Storing the session cookies
+      const { error } = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/(tabs)',
+        callbackURL: '/', // Relative URL - expoClient converts to fold://
       });
+
+      if (error) {
+        console.error('Google sign-in error:', error);
+        Alert.alert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+        return;
+      }
+
+      // If we get here without error, the plugin handled the OAuth flow
+      // Check if we have a session now
+      await refreshAuth();
+      const { data: sessionData } = await authClient.getSession();
+      if (sessionData?.user) {
+        console.log('Google login successful:', sessionData.user);
+        router.replace('/(tabs)' as any);
+      }
     } catch (err) {
-      console.error('Google sign-in error:', err);
+      console.error('Unexpected error during Google sign-in:', err);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -123,7 +159,10 @@ export default function SignupScreen() {
           {/* Input Section */}
           <View style={styles.inputSection}>
             {/* Google Sign-In */}
-            <GoogleSignInButton onPress={handleGoogleSignIn} />
+            <GoogleSignInButton 
+              onPress={handleGoogleSignIn} 
+              disabled={isGoogleLoading || isLoading}
+            />
 
             {/* Or Divider */}
             <OrDivider />

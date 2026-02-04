@@ -3,11 +3,12 @@ import { createAuthClient } from "better-auth/react";
 import * as SecureStore from "expo-secure-store";
 
 export const authClient = createAuthClient({
-    baseURL: process.env.EXPO_PUBLIC_BASE_URL || "http://localhost:8081",
+    baseURL: "https://backend.fold.taohq.org",
     plugins: [
         expoClient({
             scheme: "fold",
             storagePrefix: "fold",
+            cookiePrefix: "better-auth", // Must match backend cookie naming
             storage: SecureStore,
         })
     ]

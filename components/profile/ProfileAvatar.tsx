@@ -7,6 +7,7 @@ const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
 
 interface ProfileAvatarProps {
   imageSource?: any;
+  imageUri?: string; // URL for remote avatar
   size?: number; // Outer diameter, defaults to 124 * SCALE
 }
 
@@ -21,6 +22,7 @@ interface ProfileAvatarProps {
  */
 export function ProfileAvatar({ 
   imageSource,
+  imageUri,
   size,
 }: ProfileAvatarProps) {
   // If size provided, calculate from that; otherwise use SVG defaults
@@ -54,7 +56,19 @@ export function ProfileAvatar({
           }
         ]}
       >
-        {imageSource ? (
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={[
+              styles.avatarImage,
+              {
+                width: innerDiameter,
+                height: innerDiameter,
+                borderRadius: innerRadius,
+              }
+            ]}
+          />
+        ) : imageSource ? (
           <Image
             source={imageSource}
             style={[
