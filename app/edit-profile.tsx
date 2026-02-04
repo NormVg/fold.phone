@@ -129,6 +129,8 @@ export default function EditProfileScreen() {
         const uploadResult = await uploadAvatar(newAvatarUri);
         setIsUploadingAvatar(false);
 
+        console.log('[PROFILE] Upload result:', uploadResult);
+
         if (uploadResult.error) {
           Alert.alert('Upload Failed', uploadResult.error);
           setIsSaving(false);
@@ -136,6 +138,7 @@ export default function EditProfileScreen() {
         }
 
         avatarUrl = uploadResult.data?.url || null;
+        console.log('[PROFILE] Avatar URL to save:', avatarUrl);
       } else if (avatarUri === null && user?.image) {
         // User removed their avatar
         avatarUrl = null;
@@ -152,9 +155,12 @@ export default function EditProfileScreen() {
         updateData.avatar = avatarUrl;
       }
 
+      console.log('[PROFILE] Update data:', updateData);
+
       // Only make API call if there are changes
       if (Object.keys(updateData).length > 0) {
         const result = await updateProfile(updateData);
+        console.log('[PROFILE] Update result:', result);
 
         if (result.error) {
           Alert.alert('Update Failed', result.error);
@@ -164,7 +170,9 @@ export default function EditProfileScreen() {
       }
 
       // Refresh auth context to get updated user data
+      console.log('[PROFILE] Refreshing auth...');
       await refreshAuth();
+      console.log('[PROFILE] Auth refreshed, new user:', user);
 
       Alert.alert('Success', 'Profile updated successfully', [
         { text: 'OK', onPress: () => router.back() },

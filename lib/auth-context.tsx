@@ -35,15 +35,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (sessionData?.user) {
         // Fetch fresh user data from API to get latest profile info
-        const { data: profileData } = await getProfile();
+        // This is important because the session may have stale data (like old avatar)
+        const { data: profileData, error: profileError } = await getProfile();
+        console.log('[AUTH] Profile fetch:', profileData ? 'success' : 'failed', profileError || '');
+        
         if (profileData) {
-          // Merge session data with fresh profile data
-          // Profile returns avatar, session returns image - normalize it
-          setUser({
+          // Use profile data as source of truth, it's fetched fresh from DB
+          const mergedUser = {
             ...sessionData.user,
             ...profileData,
-            image: profileData.avatar || profileData.image || sessionData.user.image,
-          });
+            // Ensure image field is set from fresh profile data
+            image: profileData.avatar || profileData.image || null,
+            avatar: profileData.avatar || profileData.image || null,
+          };
+          console.log('[AUTH] User avatar:', mergedUser.image || mergedUser.avatar || 'none');
+          setUser(mergedUser);
         } else {
           // Fallback to session data if API fails
           setUser(sessionData.user);

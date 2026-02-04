@@ -89,7 +89,13 @@ export async function getProfile(): Promise<{
   data: User | null;
   error: string | null;
 }> {
-  return apiRequest<User>("/api/user/me");
+  // Add cache-busting to ensure fresh data
+  return apiRequest<User>("/api/user/me", {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
+  });
 }
 
 /**
