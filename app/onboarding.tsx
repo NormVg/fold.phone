@@ -1,8 +1,8 @@
 import { CaptureIcon, LockIcon } from '@/components/icons';
 import { CTAButton, FeatureCard, SpeakFreelyCard, WelcomeBadge } from '@/components/onboarding';
 import { OnboardingColors } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Dimensions, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,14 +11,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Design is based on 393px width viewport
 const SCALE = SCREEN_WIDTH / 393;
 
-const ONBOARDING_KEY = 'fold_onboarding_complete';
-
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { completeOnboarding } = useAuth();
 
   const handleStartCapturing = async () => {
-    // Mark onboarding as complete
-    await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+    // Mark onboarding as complete (updates both SecureStore and context state)
+    await completeOnboarding();
+    // Navigate to auth
     router.replace('/auth');
   };
 

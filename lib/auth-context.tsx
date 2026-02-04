@@ -1,4 +1,5 @@
 import { authClient } from '@/lib/auth-client';
+import { getProfile } from '@/lib/api';
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -11,6 +12,7 @@ interface AuthContextType {
   user: any | null;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,10 +29,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[AUTH] Onboarding complete:', onboardingComplete);
       setHasSeenOnboarding(onboardingComplete === 'true');
 
-      // Check session
-      const { data } = await authClient.getSession();
-      console.log('[AUTH] Session:', data?.user ? 'exists' : 'none');
-      setUser(data?.user || null);
+      // Check session first
+      const { data: sessionData } = await authClient.getSession();
+      console.log('[AUTH] Session:', sessionData?.user ? 'exists' : 'none');
+      
+      if (sessionData?.user) {
+        // Fetch fresh user data from API to get latest profile info
+        const { data: profileData } = await getProfile();
+        if (profileData) {
+          // Merge session data with fresh profile data
+          // Profile returns avatar, session returns image - normalize it
+          setUser({
+            ...sessionData.user,
+            ...profileData,
+            image: profileData.avatar || profileData.image || sessionData.user.image,
+          });
+        } else {
+          // Fallback to session data if API fails
+          setUser(sessionData.user);
+        }
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       console.error('Error refreshing auth:', error);
       setHasSeenOnboarding(false);
@@ -41,13 +61,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await authClient.signOut();
-      // Clear onboarding flag
+      // Clear onboarding flag so user sees onboarding again
       await SecureStore.deleteItemAsync(ONBOARDING_KEY);
-      // Update state
+      // Update state immediately
       setUser(null);
       setHasSeenOnboarding(false);
     } catch (error) {
       console.error('Sign out error:', error);
+      throw error;
+    }
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      // Save to SecureStore
+      await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+      // Update state immediately so navigation reacts
+      setHasSeenOnboarding(true);
+      console.log('[AUTH] Onboarding marked complete');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
       throw error;
     }
   };
@@ -69,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         signOut,
         refreshAuth,
+        completeOnboarding,
       }}
     >
       {children}

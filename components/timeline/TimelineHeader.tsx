@@ -1,4 +1,5 @@
 import { GOLDEN_RATIO, TimelineColors } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -16,6 +17,11 @@ interface TimelineHeaderProps {
 }
 
 export function TimelineHeader({ dayOfWeek, date, onProfilePress }: TimelineHeaderProps) {
+  const { user } = useAuth();
+  
+  // Get user's avatar URL (could be 'image' or 'avatar' depending on source)
+  const avatarUri = user?.image || user?.avatar;
+
   return (
     <View style={styles.container}>
       <View style={styles.dateContainer}>
@@ -28,10 +34,17 @@ export function TimelineHeader({ dayOfWeek, date, onProfilePress }: TimelineHead
         onPress={onProfilePress}
         activeOpacity={0.8}
       >
-        <Image
-          source={require('@/assets/images/pfp.png')}
-          style={styles.avatar}
-        />
+        {avatarUri ? (
+          <Image
+            source={{ uri: avatarUri }}
+            style={styles.avatar}
+          />
+        ) : (
+          <Image
+            source={require('@/assets/images/pfp.png')}
+            style={styles.avatar}
+          />
+        )}
       </TouchableOpacity>
     </View>
   );

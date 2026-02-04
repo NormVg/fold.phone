@@ -79,7 +79,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<UserIcon size={20 * SCALE} />}
               label="Edit Profile"
-              onPress={() => console.log('Edit Profile')}
+              onPress={() => router.push('/edit-profile' as any)}
             />
             <Divider />
             <SettingsRow
