@@ -85,13 +85,13 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<LockIcon size={20 * SCALE} />}
               label="Change Password"
-              onPress={() => console.log('Change Password')}
+              onPress={() => router.push('/change-password' as any)}
             />
             <Divider />
             <SettingsRow
               icon={<ShieldIcon size={20 * SCALE} />}
               label="Privacy"
-              onPress={() => console.log('Privacy')}
+              onPress={() => router.push('/help' as any)}
             />
           </View>
         </View>
@@ -103,13 +103,13 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<BellIcon size={20 * SCALE} />}
               label="Notifications"
-              onPress={() => console.log('Notifications')}
+              onPress={() => router.push('/notifications' as any)}
             />
             <Divider />
             <SettingsRow
               icon={<PaletteIcon size={20 * SCALE} />}
               label="Appearance"
-              onPress={() => console.log('Appearance')}
+              onPress={() => router.push('/appearance' as any)}
             />
           </View>
         </View>
@@ -121,13 +121,13 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<HelpIcon size={20 * SCALE} />}
               label="Help & FAQ"
-              onPress={() => console.log('Help')}
+              onPress={() => router.push('/help' as any)}
             />
             <Divider />
             <SettingsRow
               icon={<InfoIcon size={20 * SCALE} />}
               label="About"
-              onPress={() => console.log('About')}
+              onPress={() => router.push('/about' as any)}
             />
           </View>
         </View>
