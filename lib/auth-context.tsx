@@ -12,6 +12,7 @@ interface AuthContextType {
   user: any | null;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  updateUser: (userData: Partial<any>) => void;
   completeOnboarding: () => Promise<void>;
 }
 
@@ -91,6 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Directly update user data without refetching (useful after profile updates)
+  const updateUser = (userData: Partial<any>) => {
+    setUser((prev: any) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        ...userData,
+        // Ensure both image and avatar are in sync
+        image: userData.avatar || userData.image || prev.image,
+        avatar: userData.avatar || userData.image || prev.avatar,
+      };
+      console.log('[AUTH] User updated directly:', updated.image || updated.avatar);
+      return updated;
+    });
+  };
+
   useEffect(() => {
     async function initialize() {
       await refreshAuth();
@@ -108,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         signOut,
         refreshAuth,
+        updateUser,
         completeOnboarding,
       }}
     >

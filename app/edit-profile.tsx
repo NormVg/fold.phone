@@ -34,7 +34,7 @@ interface User {
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user: authUser, refreshAuth } = useAuth();
+  const { user: authUser, refreshAuth, updateUser } = useAuth();
   const user = authUser as User | null;
 
   const [name, setName] = useState(user?.name || '');
@@ -167,12 +167,13 @@ export default function EditProfileScreen() {
           setIsSaving(false);
           return;
         }
-      }
 
-      // Refresh auth context to get updated user data
-      console.log('[PROFILE] Refreshing auth...');
-      await refreshAuth();
-      console.log('[PROFILE] Auth refreshed, new user:', user);
+        // Use the result directly to update the user in auth context
+        // This avoids the race condition where getProfile returns stale data
+        if (result.data) {
+          updateUser(result.data);
+        }
+      }
 
       Alert.alert('Success', 'Profile updated successfully', [
         { text: 'OK', onPress: () => router.back() },
