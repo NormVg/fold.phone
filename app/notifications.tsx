@@ -1,12 +1,13 @@
 import { TimelineColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Dimensions,
   Linking,
-  Platform,
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Switch,
@@ -14,11 +15,23 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
+
+// Check if we're running in Expo Go (notifications not fully supported)
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazy import notifications to avoid crash in Expo Go
+let Notifications: typeof import('expo-notifications') | null = null;
+if (!isExpoGo) {
+  try {
+    Notifications = require('expo-notifications');
+  } catch {
+    // expo-notifications not available
+  }
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -27,15 +40,26 @@ export default function NotificationsScreen() {
   const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [achievements, setAchievements] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(!isExpoGo);
 
   useEffect(() => {
     checkNotificationPermission();
   }, []);
 
   const checkNotificationPermission = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    setPermissionStatus(status);
-    setPushEnabled(status === 'granted');
+    if (!Notifications) {
+      setIsSupported(false);
+      return;
+    }
+    
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setPermissionStatus(status);
+      setPushEnabled(status === 'granted');
+    } catch (error) {
+      console.log('Notifications not supported:', error);
+      setIsSupported(false);
+    }
   };
 
   const handleBack = () => {
@@ -43,24 +67,36 @@ export default function NotificationsScreen() {
   };
 
   const handleTogglePush = async (value: boolean) => {
+    if (!Notifications) {
+      Alert.alert(
+        'Not Supported',
+        'Push notifications require a development build. They are not available in Expo Go.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (value) {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status === 'granted') {
-        setPushEnabled(true);
-        setPermissionStatus(status);
-      } else if (status === 'denied') {
-        Alert.alert(
-          'Notifications Disabled',
-          'To enable notifications, please go to your device settings and allow notifications for Fold.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          setPushEnabled(true);
+          setPermissionStatus(status);
+        } else if (status === 'denied') {
+          Alert.alert(
+            'Notifications Disabled',
+            'To enable notifications, please go to your device settings and allow notifications for Fold.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+        }
+      } catch (error) {
+        console.log('Error requesting permissions:', error);
       }
     } else {
       setPushEnabled(false);
-      // Note: Can't revoke permissions programmatically, but we can disable local handling
     }
   };
 
@@ -77,7 +113,24 @@ export default function NotificationsScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Expo Go Warning */}
+        {!isSupported && (
+          <View style={styles.warningCard}>
+            <WarningIcon size={20 * SCALE} />
+            <View style={styles.warningTextContainer}>
+              <Text style={styles.warningTitle}>Limited in Expo Go</Text>
+              <Text style={styles.warningText}>
+                Push notifications require a development build. Your preferences will be saved for when you install the full app.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Push Notifications Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Push Notifications</Text>
@@ -88,9 +141,11 @@ export default function NotificationsScreen() {
                 <View style={styles.rowTextContainer}>
                   <Text style={styles.rowLabel}>Enable Notifications</Text>
                   <Text style={styles.rowDescription}>
-                    {permissionStatus === 'denied' 
-                      ? 'Blocked in device settings' 
-                      : 'Receive push notifications'}
+                    {!isSupported 
+                      ? 'Requires development build'
+                      : permissionStatus === 'denied' 
+                        ? 'Blocked in device settings' 
+                        : 'Receive push notifications'}
                   </Text>
                 </View>
               </View>
@@ -184,7 +239,9 @@ export default function NotificationsScreen() {
             Notification preferences are stored locally on this device. You can change system notification permissions in your device settings.
           </Text>
         </View>
-      </View>
+        
+        <View style={styles.bottomPadding} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -200,6 +257,21 @@ function BackIcon({ size = 24 }: { size?: number }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </Svg>
+  );
+}
+
+function WarningIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <Path
+        d="M10 2L18 17H2L10 2Z"
+        stroke="#B45309"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+      />
+      <Path d="M10 8V11" stroke="#B45309" strokeWidth={1.5} strokeLinecap="round" />
+      <Circle cx="10" cy="14" r="1" fill="#B45309" />
     </Svg>
   );
 }
@@ -314,10 +386,37 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40 * SCALE,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     paddingHorizontal: 17 * SCALE,
     paddingTop: 10 * SCALE,
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12 * SCALE,
+    backgroundColor: 'rgba(180, 83, 9, 0.1)',
+    borderRadius: 12 * SCALE,
+    padding: 16 * SCALE,
+    marginBottom: 24 * SCALE,
+    borderWidth: 1,
+    borderColor: 'rgba(180, 83, 9, 0.2)',
+  },
+  warningTextContainer: {
+    flex: 1,
+  },
+  warningTitle: {
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 4 * SCALE,
+  },
+  warningText: {
+    fontSize: 13 * SCALE,
+    color: '#B45309',
+    lineHeight: 18 * SCALE,
   },
   section: {
     marginBottom: 24 * SCALE,
@@ -392,5 +491,8 @@ const styles = StyleSheet.create({
     fontSize: 14 * SCALE,
     color: 'rgba(0,0,0,0.6)',
     lineHeight: 20 * SCALE,
+  },
+  bottomPadding: {
+    height: 40 * SCALE,
   },
 });
