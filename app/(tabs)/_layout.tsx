@@ -1,6 +1,11 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
+/**
+ * Tab layout - simplified since we now use PagerView for Hub/Timeline/Profile navigation.
+ * The index screen contains the swipeable pager with all three pages.
+ * Other screens (explore, settings) are hidden from tabs but still accessible via routing.
+ */
 export default function TabLayout() {
   return (
     <Tabs
@@ -12,26 +17,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Timeline',
+          title: 'Home',
         }}
       />
+      {/* Hub and Profile are now part of the pager in index, hide them */}
       <Tabs.Screen
         name="hub"
         options={{
           title: 'Hub',
+          href: null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
+          href: null,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
-          // Hide from tab navigation (not used)
           href: null,
         }}
       />
@@ -39,7 +46,6 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          // Hide from tab bar, accessed via profile
           href: null,
         }}
       />
