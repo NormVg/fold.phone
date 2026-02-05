@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: 80 * SCALE,
     height: 80 * SCALE,
-    borderRadius: 20 * SCALE,
+    borderRadius: 24 * SCALE,
     backgroundColor: '#FDFBF7',
     justifyContent: 'center',
     alignItems: 'center',
@@ -241,14 +241,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
     marginBottom: 16 * SCALE,
+    overflow: 'hidden',
   },
   logo: {
     width: 60 * SCALE,
     height: 60 * SCALE,
+    borderRadius: 18 * SCALE,
   },
   appName: {
     fontSize: 28 * SCALE,
     fontWeight: '700',
+    fontFamily: 'SignPainter',
     color: TimelineColors.textDark,
     marginBottom: 4 * SCALE,
   },

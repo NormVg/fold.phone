@@ -1,6 +1,6 @@
 /**
  * Fold App Configuration
- * 
+ *
  * Centralized configuration for all app content, links, and settings.
  * Edit this file to customize the app's text, URLs, and features.
  */
@@ -14,7 +14,7 @@ module.exports = {
     tagline: 'Capture moments. Fold memories.',
     description: 'Fold is your personal voice journal. Capture your thoughts, emotions, and daily experiences through audio recordings. Watch your memories unfold over time and discover patterns in your journey.',
     version: '1.0.0',
-    copyright: 'Tao HQ',
+    copyright: 'TheAlphaOnes',
   },
 
   // =============================================================================
@@ -24,7 +24,7 @@ module.exports = {
     website: 'https://fold.taohq.org',
     privacyPolicy: 'https://fold.taohq.org/privacy',
     termsOfService: 'https://fold.taohq.org/terms',
-    supportEmail: 'support@fold.taohq.org',
+    supportEmail: 'thealphaones.work@gmail.com',
   },
 
   // =============================================================================
@@ -32,7 +32,7 @@ module.exports = {
   // =============================================================================
   credits: {
     builtWith: 'React Native & Expo',
-    madeBy: 'Tao HQ',
+    madeBy: 'TheAlphaOnes',
     footerMessage: 'Made with love for mindful journaling',
   },
 
