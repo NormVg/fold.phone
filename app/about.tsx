@@ -250,7 +250,6 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 28 * SCALE,
-    fontWeight: '700',
     fontFamily: 'SignPainter',
     color: TimelineColors.textDark,
     marginBottom: 4 * SCALE,

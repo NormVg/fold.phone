@@ -1,4 +1,4 @@
-import { BottomNavBar, TimelineHeader, VoiceCard, PhotoCard } from '@/components/timeline';
+import { BottomNavBar, TimelineHeader, VoiceCard, PhotoCard, TextCard, VideoCard, StoryCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -76,6 +76,18 @@ export default function TimelineScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Text card entry */}
+          <View style={styles.cardWrapper}>
+            <TextCard
+              content="Just had the most amazing coffee this morning. Sometimes it's the little things that make a day great."
+              time="04:20 PM"
+              mood="HAPPY"
+              onSharePress={handleSharePress}
+              onLocationPress={handleLocationPress}
+              onMoodPress={handleMoodPress}
+            />
+          </View>
+
           {/* Voice card entry */}
           <View style={styles.cardWrapper}>
             <VoiceCard
@@ -98,6 +110,39 @@ export default function TimelineScreen() {
               imageUri="https://picsum.photos/400/300"
               mood="SAD"
               onImagePress={handleImagePress}
+              onSharePress={handleSharePress}
+              onLocationPress={handleLocationPress}
+              onMoodPress={handleMoodPress}
+            />
+          </View>
+
+          {/* Video card entry */}
+          <View style={styles.cardWrapper}>
+            <VideoCard
+              title="Sunset timelapse"
+              time="01:45 PM"
+              duration="00:32"
+              thumbnailUri="https://picsum.photos/400/250"
+              mood="HAPPY"
+              onPlayPress={handlePlayPress}
+              onSharePress={handleSharePress}
+              onLocationPress={handleLocationPress}
+              onMoodPress={handleMoodPress}
+            />
+          </View>
+
+          {/* Story card entry */}
+          <View style={styles.cardWrapper}>
+            <StoryCard
+              id="story-1"
+              title="A Walk Through Memory Lane"
+              content="Today I found myself walking through the old neighborhood where I grew up. The streets seemed smaller somehow, the trees much taller than I remembered. Every corner held a memory - the spot where I learned to ride a bike, the fence I used to climb, the window of my childhood bedroom where I would sit and dream about the future.
+
+It's strange how places can hold so much of who we were. The old bakery is still there, though under new ownership now. The smell of fresh bread still wafts through the morning air, just as it did twenty years ago. I bought a croissant, and for a moment, I was ten years old again, clutching coins in my small hands, feeling like the richest kid in the world.
+
+Some things change, and some things stay the same. But I realized today that the most important things - the feelings, the love, the sense of belonging - those live inside us forever. We carry our homes within our hearts, no matter how far we travel."
+              time="12:30 PM"
+              mood="HAPPY"
               onSharePress={handleSharePress}
               onLocationPress={handleLocationPress}
               onMoodPress={handleMoodPress}
