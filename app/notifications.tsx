@@ -15,16 +15,47 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
+// @ts-ignore
+import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
 
+// Notification type from config
+type NotificationType = {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  defaultEnabled: boolean;
+};
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const [pushEnabled, setPushEnabled] = useState(false);
-  const [dailyReminder, setDailyReminder] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
-  const [achievements, setAchievements] = useState(true);
+  
+  // Initialize notification states from config defaults
+  const notificationTypes: NotificationType[] = config.notifications.types;
+  const [notificationStates, setNotificationStates] = useState<Record<string, boolean>>(
+    notificationTypes.reduce((acc: Record<string, boolean>, type: NotificationType) => {
+      acc[type.id] = type.defaultEnabled;
+      return acc;
+    }, {})
+  );
+  
+  const toggleNotification = (id: string, value: boolean) => {
+    setNotificationStates(prev => ({ ...prev, [id]: value }));
+  };
+  
+  // Icon mapping
+  const getIcon = (iconName: string, size: number) => {
+    switch (iconName) {
+      case 'clock': return <ClockIcon size={size} />;
+      case 'calendar': return <CalendarIcon size={size} />;
+      case 'trophy': return <TrophyIcon size={size} />;
+      default: return <BellIcon size={size} />;
+    }
+  };
 
   const handleBack = () => {
     router.back();
@@ -100,71 +131,32 @@ export default function NotificationsScreen() {
         <View style={[styles.section, !pushEnabled && styles.sectionDisabled]}>
           <Text style={styles.sectionTitle}>Notification Types</Text>
           <View style={styles.card}>
-            <View style={styles.settingsRow}>
-              <View style={styles.rowLeft}>
-                <ClockIcon size={20 * SCALE} />
-                <View style={styles.rowTextContainer}>
-                  <Text style={[styles.rowLabel, !pushEnabled && styles.textDisabled]}>
-                    Daily Reminder
-                  </Text>
-                  <Text style={[styles.rowDescription, !pushEnabled && styles.textDisabled]}>
-                    Reminder to capture your daily thoughts
-                  </Text>
+            {notificationTypes.map((type: NotificationType, index: number) => (
+              <React.Fragment key={type.id}>
+                {index > 0 && <View style={styles.divider} />}
+                <View style={styles.settingsRow}>
+                  <View style={styles.rowLeft}>
+                    {getIcon(type.icon, 20 * SCALE)}
+                    <View style={styles.rowTextContainer}>
+                      <Text style={[styles.rowLabel, !pushEnabled && styles.textDisabled]}>
+                        {type.label}
+                      </Text>
+                      <Text style={[styles.rowDescription, !pushEnabled && styles.textDisabled]}>
+                        {type.description}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={notificationStates[type.id]}
+                    onValueChange={(value) => toggleNotification(type.id, value)}
+                    disabled={!pushEnabled}
+                    trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.3)' }}
+                    thumbColor={notificationStates[type.id] && pushEnabled ? TimelineColors.primary : '#f4f3f4'}
+                    ios_backgroundColor="rgba(0,0,0,0.1)"
+                  />
                 </View>
-              </View>
-              <Switch
-                value={dailyReminder}
-                onValueChange={setDailyReminder}
-                disabled={!pushEnabled}
-                trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.3)' }}
-                thumbColor={dailyReminder && pushEnabled ? TimelineColors.primary : '#f4f3f4'}
-                ios_backgroundColor="rgba(0,0,0,0.1)"
-              />
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.settingsRow}>
-              <View style={styles.rowLeft}>
-                <CalendarIcon size={20 * SCALE} />
-                <View style={styles.rowTextContainer}>
-                  <Text style={[styles.rowLabel, !pushEnabled && styles.textDisabled]}>
-                    Weekly Digest
-                  </Text>
-                  <Text style={[styles.rowDescription, !pushEnabled && styles.textDisabled]}>
-                    Summary of your weekly memories
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={weeklyDigest}
-                onValueChange={setWeeklyDigest}
-                disabled={!pushEnabled}
-                trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.3)' }}
-                thumbColor={weeklyDigest && pushEnabled ? TimelineColors.primary : '#f4f3f4'}
-                ios_backgroundColor="rgba(0,0,0,0.1)"
-              />
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.settingsRow}>
-              <View style={styles.rowLeft}>
-                <TrophyIcon size={20 * SCALE} />
-                <View style={styles.rowTextContainer}>
-                  <Text style={[styles.rowLabel, !pushEnabled && styles.textDisabled]}>
-                    Achievements
-                  </Text>
-                  <Text style={[styles.rowDescription, !pushEnabled && styles.textDisabled]}>
-                    Celebrate milestones and badges
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={achievements}
-                onValueChange={setAchievements}
-                disabled={!pushEnabled}
-                trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.3)' }}
-                thumbColor={achievements && pushEnabled ? TimelineColors.primary : '#f4f3f4'}
-                ios_backgroundColor="rgba(0,0,0,0.1)"
-              />
-            </View>
+              </React.Fragment>
+            ))}
           </View>
         </View>
 
@@ -172,7 +164,7 @@ export default function NotificationsScreen() {
         <View style={styles.infoCard}>
           <InfoIcon size={20 * SCALE} />
           <Text style={styles.infoText}>
-            Notification preferences are stored locally on this device. You can change system notification permissions in your device settings.
+            {config.infoMessages.notifications}
           </Text>
         </View>
         

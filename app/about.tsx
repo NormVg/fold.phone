@@ -1,6 +1,5 @@
 import { TimelineColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import React from 'react';
 import {
@@ -16,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
+// @ts-ignore
+import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -23,7 +24,7 @@ const SCALE = SCREEN_WIDTH / 393;
 export default function AboutScreen() {
   const router = useRouter();
   
-  const appVersion = Application.nativeApplicationVersion || '1.0.0';
+  const appVersion = Application.nativeApplicationVersion || config.app.version;
   const buildNumber = Application.nativeBuildVersion || '1';
 
   const handleBack = () => {
@@ -34,11 +35,11 @@ export default function AboutScreen() {
     Linking.openURL(url);
   };
 
-  const links = [
-    { label: 'Privacy Policy', url: 'https://fold.taohq.org/privacy' },
-    { label: 'Terms of Service', url: 'https://fold.taohq.org/terms' },
-    { label: 'Visit Website', url: 'https://fold.taohq.org' },
-  ];
+  // Build links from config
+  const links = config.aboutLinks.map((link: { label: string; key: string }) => ({
+    label: link.label,
+    url: config.links[link.key as keyof typeof config.links],
+  }));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -67,15 +68,15 @@ export default function AboutScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.appName}>Fold</Text>
-          <Text style={styles.tagline}>Capture moments. Fold memories.</Text>
+          <Text style={styles.appName}>{config.app.name}</Text>
+          <Text style={styles.tagline}>{config.app.tagline}</Text>
           <Text style={styles.version}>Version {appVersion} ({buildNumber})</Text>
         </View>
 
         {/* Description */}
         <View style={styles.descriptionCard}>
           <Text style={styles.descriptionText}>
-            Fold is your personal voice journal. Capture your thoughts, emotions, and daily experiences through audio recordings. Watch your memories unfold over time and discover patterns in your journey.
+            {config.app.description}
           </Text>
         </View>
 
@@ -107,12 +108,12 @@ export default function AboutScreen() {
           <View style={styles.card}>
             <View style={styles.creditRow}>
               <Text style={styles.creditLabel}>Built with</Text>
-              <Text style={styles.creditValue}>React Native & Expo</Text>
+              <Text style={styles.creditValue}>{config.credits.builtWith}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.creditRow}>
               <Text style={styles.creditLabel}>Made by</Text>
-              <Text style={styles.creditValue}>Tao HQ</Text>
+              <Text style={styles.creditValue}>{config.credits.madeBy}</Text>
             </View>
           </View>
         </View>
@@ -120,11 +121,11 @@ export default function AboutScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <HeartIcon size={16 * SCALE} />
-          <Text style={styles.footerText}>Made with love for mindful journaling</Text>
+          <Text style={styles.footerText}>{config.credits.footerMessage}</Text>
         </View>
 
         <Text style={styles.copyright}>
-          {'\u00A9'} {new Date().getFullYear()} Tao HQ. All rights reserved.
+          {'\u00A9'} {new Date().getFullYear()} {config.app.copyright}. All rights reserved.
         </Text>
 
         <View style={styles.bottomPadding} />

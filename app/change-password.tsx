@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Svg, { Path, Circle } from 'react-native-svg';
+// @ts-ignore
+import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -203,7 +205,7 @@ export default function ChangePasswordScreen() {
         <View style={styles.infoCard}>
           <InfoIcon size={20 * SCALE} />
           <Text style={styles.infoText}>
-            Choose a strong password that you haven't used before. A good password should include a mix of letters, numbers, and symbols.
+            {config.infoMessages.password}
           </Text>
         </View>
 

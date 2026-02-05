@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+// @ts-ignore
+import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -19,17 +21,14 @@ type ThemeOption = 'light' | 'dark' | 'system';
 
 export default function AppearanceScreen() {
   const router = useRouter();
-  const [selectedTheme, setSelectedTheme] = useState<ThemeOption>('light');
+  const [selectedTheme, setSelectedTheme] = useState<ThemeOption>(config.appearance.defaultTheme as ThemeOption);
 
   const handleBack = () => {
     router.back();
   };
 
-  const themes: { id: ThemeOption; label: string; description: string }[] = [
-    { id: 'light', label: 'Light', description: 'Always use light mode' },
-    { id: 'dark', label: 'Dark', description: 'Always use dark mode' },
-    { id: 'system', label: 'System', description: 'Match device settings' },
-  ];
+  // Use themes from config (cast to proper type)
+  const themes = config.appearance.themes as { id: ThemeOption; label: string; description: string }[];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -104,7 +103,7 @@ export default function AppearanceScreen() {
         <View style={styles.infoCard}>
           <InfoIcon size={20 * SCALE} />
           <Text style={styles.infoText}>
-            Dark mode is coming soon! Currently, Fold uses the beautiful cream theme you see now.
+            {config.appearance.darkModeMessage}
           </Text>
         </View>
       </View>

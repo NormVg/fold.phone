@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
+// @ts-ignore
+import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -22,32 +24,8 @@ interface FAQItem {
   answer: string;
 }
 
-const faqData: FAQItem[] = [
-  {
-    question: 'How do I create a new memory?',
-    answer: 'Tap the capture button (microphone icon) at the bottom of any screen. You can record voice memos, add emotions, and save your thoughts instantly.',
-  },
-  {
-    question: 'Are my recordings stored securely?',
-    answer: 'Yes! All your voice recordings and data are encrypted and stored securely. Only you have access to your memories.',
-  },
-  {
-    question: 'Can I export my memories?',
-    answer: 'Export functionality is coming soon. You\'ll be able to export your memories as audio files or transcribed text.',
-  },
-  {
-    question: 'What is the Fold Score?',
-    answer: 'Your Fold Score reflects your journaling consistency and engagement. The more regularly you capture memories, the higher your score grows.',
-  },
-  {
-    question: 'How do streaks work?',
-    answer: 'Streaks count consecutive days of capturing at least one memory. Keep your streak alive by recording something every day!',
-  },
-  {
-    question: 'Can I use Fold offline?',
-    answer: 'Yes! You can record memories offline. They\'ll sync automatically when you\'re back online.',
-  },
-];
+// Use FAQ data from config
+const faqData: FAQItem[] = config.faq;
 
 export default function HelpScreen() {
   const router = useRouter();
@@ -62,7 +40,7 @@ export default function HelpScreen() {
   };
 
   const handleContactSupport = () => {
-    Linking.openURL('mailto:support@fold.taohq.org?subject=Fold App Support');
+    Linking.openURL(`mailto:${config.links.supportEmail}?subject=${config.app.name} App Support`);
   };
 
   return (
@@ -133,9 +111,10 @@ export default function HelpScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Tips</Text>
           <View style={styles.tipsCard}>
-            <TipRow icon={<MicIcon size={18 * SCALE} />} text="Long-press the capture button for quick recording" />
-            <TipRow icon={<CalendarIcon size={18 * SCALE} />} text="Swipe on the calendar to navigate between months" />
-            <TipRow icon={<SparkleIcon size={18 * SCALE} />} text="Add emotions to your memories for better insights" />
+            {config.tips.map((tip: { icon: string; text: string }, index: number) => {
+              const IconComponent = tip.icon === 'mic' ? MicIcon : tip.icon === 'calendar' ? CalendarIcon : SparkleIcon;
+              return <TipRow key={index} icon={<IconComponent size={18 * SCALE} />} text={tip.text} />;
+            })}
           </View>
         </View>
 
