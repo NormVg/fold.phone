@@ -3,7 +3,9 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 
@@ -82,6 +84,14 @@ function RootLayoutNav() {
     }
   }, [fontsLoaded, isLoading, hasSeenOnboarding]);
 
+  // Hide Android navigation bar for immersive experience
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+    }
+  }, []);
+
   if (!fontsLoaded || isLoading || hasSeenOnboarding === null) {
     return null;
   }
@@ -105,7 +115,7 @@ function RootLayoutNav() {
           <Stack.Screen name="new-memory" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar hidden={true} />
       </ThemeProvider>
     </KeyboardProvider>
   );
