@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import type { MoodType } from '../mood/MoodPicker';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -11,7 +12,8 @@ const CARD_WIDTH = 340 * SCALE;
 interface TextCardProps {
   content: string; // The text content (like a tweet)
   time?: string; // e.g., "03:34 PM"
-  mood?: string; // e.g., "SAD", "HAPPY"
+  mood?: string; // e.g., "SAD", "HAPPY", "V. Sad", "Normal", etc.
+  location?: string; // e.g., "Mumbai"
   onPress?: () => void;
   onSharePress?: () => void;
   onLocationPress?: () => void;
@@ -51,26 +53,83 @@ function TextIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-// Sad face icon
-function SadIcon({ size = 16 }: { size?: number }) {
+// Small inline mood icons for timeline cards (all 5 moods)
+function VSadSmallIcon({ size = 16 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <Path
-        d="M7.72626 1.44922C6.48478 1.44922 5.27118 1.81736 4.23892 2.50709C3.20667 3.19682 2.40213 4.17716 1.92703 5.32414C1.45194 6.47112 1.32763 7.73322 1.56983 8.95085C1.81203 10.1685 2.40986 11.2869 3.28772 12.1648C4.16558 13.0427 5.28405 13.6405 6.50167 13.8827C7.7193 14.1249 8.9814 14.0006 10.1284 13.5255C11.2754 13.0504 12.2557 12.2458 12.9454 11.2136C13.6352 10.1813 14.0033 8.96774 14.0033 7.72626C14.0015 6.06202 13.3397 4.46645 12.1629 3.28966C10.9861 2.11287 9.3905 1.45098 7.72626 1.44922ZM5.55344 5.79486C5.69669 5.79486 5.83672 5.83734 5.95582 5.91692C6.07493 5.99651 6.16776 6.10962 6.22258 6.24197C6.2774 6.37431 6.29174 6.51994 6.2638 6.66043C6.23585 6.80093 6.16687 6.92998 6.06558 7.03127C5.96429 7.13257 5.83523 7.20155 5.69474 7.22949C5.55424 7.25744 5.40862 7.2431 5.27627 7.18828C5.14393 7.13346 5.03081 7.04063 4.95123 6.92152C4.87164 6.80241 4.82917 6.66238 4.82917 6.51914C4.82917 6.32705 4.90547 6.14282 5.0413 6.007C5.17713 5.87117 5.36135 5.79486 5.55344 5.79486ZM10.3819 11.041C10.2711 11.1049 10.1395 11.1223 10.0159 11.0892C9.89236 11.0562 9.78695 10.9755 9.72284 10.8648C9.27198 10.0856 8.5634 9.65766 7.72626 9.65766C6.88912 9.65766 6.18054 10.0862 5.72968 10.8648C5.69949 10.9225 5.65795 10.9735 5.60754 11.0147C5.55714 11.0559 5.49891 11.0866 5.43637 11.1047C5.37382 11.1228 5.30826 11.1281 5.24361 11.1203C5.17897 11.1124 5.11658 11.0916 5.0602 11.059C5.00382 11.0264 4.95461 10.9828 4.91554 10.9307C4.87647 10.8786 4.84834 10.8191 4.83285 10.7558C4.81736 10.6926 4.81482 10.6269 4.82539 10.5626C4.83596 10.4983 4.85941 10.4369 4.89435 10.3819C5.51542 9.30819 6.54751 8.69196 7.72626 8.69196C8.90502 8.69196 9.93711 9.30759 10.5582 10.3819C10.6221 10.4927 10.6394 10.6244 10.6064 10.7479C10.5733 10.8715 10.4926 10.9769 10.3819 11.041ZM9.89908 7.24341C9.75583 7.24341 9.6158 7.20093 9.4967 7.12135C9.37759 7.04176 9.28476 6.92865 9.22994 6.7963C9.17512 6.66396 9.16078 6.51833 9.18873 6.37784C9.21667 6.23734 9.28565 6.10829 9.38694 6.007C9.48824 5.9057 9.61729 5.83672 9.75778 5.80878C9.89828 5.78083 10.0439 5.79518 10.1762 5.84999C10.3086 5.90481 10.4217 5.99764 10.5013 6.11675C10.5809 6.23586 10.6234 6.37589 10.6234 6.51914C10.6234 6.71122 10.5443 6.89545 10.4085 7.03127C10.2727 7.1671 10.0884 7.24341 9.89636 7.24341H9.89908Z"
-        fill="#810100"
+        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
+        fill="#DCBCBC"
+        stroke="#181717"
+        strokeWidth={0.8}
       />
+      <Path d="M5.5 11c.7-.8 1.5-1 2.5-1s1.8.2 2.5 1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
+      <Path d="M4.5 7v3M11.5 7v3" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
+      <Path d="M4.5 5.5l1.5.5M11.5 5.5l-1.5.5" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
     </Svg>
   );
 }
 
-// Happy/Satisfied face icon
-function HappyIcon({ size = 16 }: { size?: number }) {
+function SadSmallIcon({ size = 16 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <Path
-        d="M7.72626 1.44922C6.48478 1.44922 5.27118 1.81736 4.23892 2.50709C3.20667 3.19682 2.40213 4.17716 1.92703 5.32414C1.45194 6.47112 1.32763 7.73322 1.56983 8.95085C1.81203 10.1685 2.40986 11.2869 3.28772 12.1648C4.16558 13.0427 5.28405 13.6405 6.50167 13.8827C7.7193 14.1249 8.9814 14.0006 10.1284 13.5255C11.2754 13.0504 12.2557 12.2458 12.9454 11.2136C13.6352 10.1813 14.0033 8.96774 14.0033 7.72626C14.0015 6.06202 13.3397 4.46645 12.1629 3.28966C10.9861 2.11287 9.3905 1.45098 7.72626 1.44922ZM5.55344 5.79486C5.69669 5.79486 5.83672 5.83734 5.95582 5.91692C6.07493 5.99651 6.16776 6.10962 6.22258 6.24197C6.2774 6.37431 6.29174 6.51994 6.2638 6.66043C6.23585 6.80093 6.16687 6.92998 6.06558 7.03127C5.96429 7.13257 5.83523 7.20155 5.69474 7.22949C5.55424 7.25744 5.40862 7.2431 5.27627 7.18828C5.14393 7.13346 5.03081 7.04063 4.95123 6.92152C4.87164 6.80241 4.82917 6.66238 4.82917 6.51914C4.82917 6.32705 4.90547 6.14282 5.0413 6.007C5.17713 5.87117 5.36135 5.79486 5.55344 5.79486ZM10.3819 11.041C10.2711 11.1049 10.1395 11.1223 10.0159 11.0892C9.89236 11.0562 9.78695 10.9755 9.72284 10.8648C9.27198 10.0856 8.5634 9.65766 7.72626 9.65766C6.88912 9.65766 6.18054 10.0862 5.72968 10.8648C5.69949 10.9225 5.65795 10.9735 5.60754 11.0147C5.55714 11.0559 5.49891 11.0866 5.43637 11.1047C5.37382 11.1228 5.30826 11.1281 5.24361 11.1203C5.17897 11.1124 5.11658 11.0916 5.0602 11.059C5.00382 11.0264 4.95461 10.9828 4.91554 10.9307C4.87647 10.8786 4.84834 10.8191 4.83285 10.7558C4.81736 10.6926 4.81482 10.6269 4.82539 10.5626C4.83596 10.4983 4.85941 10.4369 4.89435 10.3819C5.51542 9.30819 6.54751 8.69196 7.72626 8.69196C8.90502 8.69196 9.93711 9.30759 10.5582 10.3819C10.6221 10.4927 10.6394 10.6244 10.6064 10.7479C10.5733 10.8715 10.4926 10.9769 10.3819 11.041ZM9.89908 7.24341C9.75583 7.24341 9.6158 7.20093 9.4967 7.12135C9.37759 7.04176 9.28476 6.92865 9.22994 6.7963C9.17512 6.66396 9.16078 6.51833 9.18873 6.37784C9.21667 6.23734 9.28565 6.10829 9.38694 6.007C9.48824 5.9057 9.61729 5.83672 9.75778 5.80878C9.89828 5.78083 10.0439 5.79518 10.1762 5.84999C10.3086 5.90481 10.4217 5.99764 10.5013 6.11675C10.5809 6.23586 10.6234 6.37589 10.6234 6.51914C10.6234 6.71122 10.5443 6.89545 10.4085 7.03127C10.2727 7.1671 10.0884 7.24341 9.89636 7.24341H9.89908Z"
-        fill="#810100"
+        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
+        fill="#E5D4D4"
+        stroke="#181717"
+        strokeWidth={0.8}
       />
+      <Path d="M5.5 11c.7-.8 1.5-1 2.5-1s1.8.2 2.5 1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
+      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
+      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
+    </Svg>
+  );
+}
+
+function NormalSmallIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <Path
+        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
+        fill="#E5E3D4"
+        stroke="#181717"
+        strokeWidth={0.8}
+      />
+      <Path d="M5.5 10h5" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
+      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
+      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
+    </Svg>
+  );
+}
+
+function HappySmallIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <Path
+        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
+        fill="#D4E5D5"
+        stroke="#181717"
+        strokeWidth={0.8}
+      />
+      <Path d="M5.5 9.5c.7.8 1.5 1 2.5 1s1.8-.2 2.5-1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
+      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
+      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
+    </Svg>
+  );
+}
+
+function VHappySmallIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <Path
+        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
+        fill="#BCDCBE"
+        stroke="#181717"
+        strokeWidth={0.8}
+      />
+      <Path d="M5 9c0 0 1 2.5 3 2.5s3-2.5 3-2.5" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
+      <Path d="M4.5 6c.5-.5 1.5-.5 2 0" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
+      <Path d="M9.5 6c.5-.5 1.5-.5 2 0" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -102,14 +161,25 @@ function ShareIcon({ size = 16 }: { size?: number }) {
 export function TextCard({
   content,
   time = '03:34 PM',
-  mood = 'HAPPY',
+  mood = 'Normal',
+  location,
   onPress,
   onSharePress,
   onLocationPress,
   onMoodPress,
 }: TextCardProps) {
-  const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
-  
+  // Map mood types to small inline icons
+  const MOOD_ICONS: Record<MoodType, React.FC<{ size?: number }>> = {
+    'V. Sad': VSadSmallIcon,
+    'Sad': SadSmallIcon,
+    'Normal': NormalSmallIcon,
+    'Happy': HappySmallIcon,
+    'V. Happy': VHappySmallIcon,
+  };
+
+  // Get the appropriate mood icon, fallback to NormalSmallIcon if mood not found
+  const MoodIcon = MOOD_ICONS[mood as MoodType] || NormalSmallIcon;
+
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {/* Top section: Text icon + Time */}
@@ -121,14 +191,14 @@ export function TextCard({
           <Text style={styles.timeText}>{time}</Text>
         </View>
       </View>
-      
+
       {/* Middle section: Text content */}
       <View style={styles.contentContainer}>
         <Text style={styles.contentText} numberOfLines={6}>
           {content}
         </Text>
       </View>
-      
+
       {/* Bottom section: Action buttons */}
       <View style={styles.bottomSection}>
         {/* Mood button */}
@@ -136,16 +206,18 @@ export function TextCard({
           <MoodIcon size={16 * SCALE} />
           <Text style={styles.actionText}>{mood}</Text>
         </Pressable>
-        
-        {/* Location button */}
-        <Pressable style={styles.actionButton} onPress={onLocationPress}>
-          <LocationIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>LOCATION</Text>
-        </Pressable>
-        
+
+        {/* Location button - only show if location is set */}
+        {location && (
+          <Pressable style={styles.actionButton} onPress={onLocationPress}>
+            <LocationIcon size={16 * SCALE} />
+            <Text style={styles.actionText}>{location}</Text>
+          </Pressable>
+        )}
+
         {/* Spacer */}
         <View style={{ flex: 1 }} />
-        
+
         {/* Share button */}
         <Pressable style={styles.shareButton} onPress={onSharePress}>
           <ShareIcon size={16 * SCALE} />

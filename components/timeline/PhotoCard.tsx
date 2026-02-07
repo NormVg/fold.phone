@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable, Image } from 'react-native';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import React, { useState } from 'react';
+import { Dimensions, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -8,12 +8,15 @@ const SCALE = SCREEN_WIDTH / 393;
 // Card dimensions - matching design (358x358 in SVG, scaled proportionally)
 const CARD_WIDTH = 340 * SCALE;
 const IMAGE_HEIGHT = 234 * SCALE; // Proportional to 246/358 ratio
+const IMAGE_WIDTH = CARD_WIDTH - 28 * SCALE; // Account for card padding (14 * 2)
 
 interface PhotoCardProps {
   title?: string; // e.g., "Hello"
   time?: string; // e.g., "03:34 PM"
-  imageUri?: string; // URI for the photo
+  imageUri?: string; // URI for single photo
+  imageUris?: string[]; // URIs for multiple photos (slideshow)
   mood?: string; // e.g., "SAD", "SAT"
+  location?: string;
   onImagePress?: () => void;
   onSharePress?: () => void;
   onLocationPress?: () => void;
@@ -84,67 +87,159 @@ export function PhotoCard({
   title = 'Photo',
   time = '03:34 PM',
   imageUri,
+  imageUris,
   mood = 'SAD',
+  location,
   onImagePress,
   onSharePress,
   onLocationPress,
   onMoodPress,
 }: PhotoCardProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
-  
+
+  // Combine single imageUri and imageUris array
+  const allImages = imageUris && imageUris.length > 0
+    ? imageUris
+    : (imageUri ? [imageUri] : []);
+
+  const handleOpenFullscreen = () => {
+    setActiveIndex(0);
+    setIsFullscreen(true);
+  };
+
+  const handleCloseFullscreen = () => {
+    setIsFullscreen(false);
+  };
+
+  const handleFullscreenScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const screenWidth = Dimensions.get('window').width;
+    const index = Math.round(offsetX / screenWidth);
+    setActiveIndex(index);
+  };
+
   return (
-    <View style={styles.card}>
-      {/* Top section: Photo icon + Title + Time */}
-      <View style={styles.topSection}>
-        <View style={styles.titleRow}>
-          <View style={styles.iconCircle}>
-            <PhotoIcon size={16 * SCALE} />
+    <>
+      <View style={styles.card}>
+        {/* Top section: Photo icon + Title + Time */}
+        <View style={styles.topSection}>
+          <View style={styles.titleRow}>
+            <View style={styles.iconCircle}>
+              <PhotoIcon size={16 * SCALE} />
+            </View>
+            <Text style={styles.titleText}>{title}</Text>
           </View>
-          <Text style={styles.titleText}>{title}</Text>
+          <View style={styles.timeBadge}>
+            <Text style={styles.timeText}>{time}</Text>
+          </View>
         </View>
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeText}>{time}</Text>
+
+        {/* Middle section: Photo with count badge if multiple */}
+        <Pressable onPress={handleOpenFullscreen} style={styles.imageContainer}>
+          {allImages.length > 0 ? (
+            <>
+              <Image
+                source={{ uri: allImages[0] }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+              {/* Badge showing count if multiple images */}
+              {allImages.length > 1 && (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>+{allImages.length - 1}</Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <PhotoIcon size={48 * SCALE} />
+            </View>
+          )}
+        </Pressable>
+
+        {/* Bottom section: Action buttons */}
+        <View style={styles.bottomSection}>
+          {/* Mood button */}
+          <Pressable style={styles.actionButton} onPress={onMoodPress}>
+            <MoodIcon size={16 * SCALE} />
+            <Text style={styles.actionText}>{mood}</Text>
+          </Pressable>
+
+          {/* Location button - only show if location is set */}
+          {location && (
+            <Pressable style={styles.actionButton} onPress={onLocationPress}>
+              <LocationIcon size={16 * SCALE} />
+              <Text style={styles.actionText}>{location}</Text>
+            </Pressable>
+          )}
+
+          {/* Spacer */}
+          <View style={{ flex: 1 }} />
+
+          {/* Share button */}
+          <Pressable style={styles.shareButton} onPress={onSharePress}>
+            <ShareIcon size={16 * SCALE} />
+          </Pressable>
         </View>
       </View>
-      
-      {/* Middle section: Photo */}
-      <Pressable onPress={onImagePress} style={styles.imageContainer}>
-        {imageUri ? (
-          <Image 
-            source={{ uri: imageUri }} 
-            style={styles.image}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <PhotoIcon size={48 * SCALE} />
+
+      {/* Fullscreen Modal Gallery */}
+      <Modal
+        visible={isFullscreen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseFullscreen}
+      >
+        <View style={styles.modalContainer}>
+          {/* Close button */}
+          <Pressable style={styles.closeButton} onPress={handleCloseFullscreen}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </Pressable>
+
+          {/* Swipeable images */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleFullscreenScroll}
+            scrollEventThrottle={16}
+            style={styles.fullscreenScrollView}
+          >
+            {allImages.map((uri, index) => (
+              <View key={index} style={styles.fullscreenImageContainer}>
+                <Image
+                  source={{ uri }}
+                  style={styles.fullscreenImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Dot indicators */}
+          {allImages.length > 1 && (
+            <View style={styles.fullscreenDotsContainer}>
+              {allImages.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.fullscreenDot,
+                    index === activeIndex && styles.fullscreenActiveDot
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Counter */}
+          <View style={styles.counterContainer}>
+            <Text style={styles.counterText}>{activeIndex + 1} / {allImages.length}</Text>
           </View>
-        )}
-      </Pressable>
-      
-      {/* Bottom section: Action buttons */}
-      <View style={styles.bottomSection}>
-        {/* Mood button */}
-        <Pressable style={styles.actionButton} onPress={onMoodPress}>
-          <MoodIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>{mood}</Text>
-        </Pressable>
-        
-        {/* Location button */}
-        <Pressable style={styles.actionButton} onPress={onLocationPress}>
-          <LocationIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>LOCATION</Text>
-        </Pressable>
-        
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-        
-        {/* Share button */}
-        <Pressable style={styles.shareButton} onPress={onSharePress}>
-          <ShareIcon size={16 * SCALE} />
-        </Pressable>
-      </View>
-    </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -199,7 +294,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   imageContainer: {
-    width: '100%',
+    width: IMAGE_WIDTH,
     height: IMAGE_HEIGHT,
     borderRadius: 15 * SCALE,
     overflow: 'hidden',
@@ -207,8 +302,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+    borderRadius: 15 * SCALE,
   },
   imagePlaceholder: {
     width: '100%',
@@ -240,6 +336,92 @@ const styles = StyleSheet.create({
     fontSize: 11 * SCALE,
     fontWeight: '600',
     color: '#181717',
+  },
+  // Count badge for multiple images
+  countBadge: {
+    position: 'absolute',
+    top: 10 * SCALE,
+    right: 10 * SCALE,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12 * SCALE,
+    paddingHorizontal: 10 * SCALE,
+    paddingVertical: 4 * SCALE,
+  },
+  countBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12 * SCALE,
+    fontWeight: '600',
+  },
+  // Fullscreen modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  fullscreenScrollView: {
+    flex: 1,
+  },
+  fullscreenImageContainer: {
+    width: SCREEN_WIDTH,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
+  },
+  fullscreenDotsContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fullscreenDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  fullscreenActiveDot: {
+    backgroundColor: '#FFFFFF',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  counterContainer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  counterText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

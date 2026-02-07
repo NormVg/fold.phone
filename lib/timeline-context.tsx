@@ -18,8 +18,9 @@ export interface TimelineEntry {
   audioUri?: string;
   audioDuration?: number; // seconds
 
-  // Photo entry
+  // Photo entry (single or multiple)
   photoUri?: string;
+  photoUris?: string[]; // For slideshow/carousel of photos
 
   // Video entry
   videoUri?: string;

@@ -1,8 +1,13 @@
 import { MediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { useTimeline } from '@/lib/timeline-context';
+import { Image as ExpoImage } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -50,17 +55,221 @@ function CloseButton({ size = 48.54, onPress }: { size?: number; onPress: () => 
   );
 }
 
+// Location icon
+function LocationIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+        fill={COLORS.primary}
+      />
+    </Svg>
+  );
+}
+
 export default function EntryTextScreen() {
   const router = useRouter();
+  const { addEntry } = useTimeline();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [textContent, setTextContent] = useState('');
+  const [location, setLocation] = useState<string | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [attachedMedia, setAttachedMedia] = useState<{ uri: string; type: 'image' | 'video'; duration?: number }[]>([]);
 
   const handleClose = () => {
     router.back();
   };
 
+  // Photo picker - only images allowed if images exist (exclusive with videos)
+  const handlePhotoPress = async () => {
+    // Check if videos are already attached
+    const hasVideos = attachedMedia.some(m => m.type === 'video');
+    if (hasVideos) {
+      Alert.alert(
+        'Media Type Conflict',
+        'You already have a video attached. Remove it first to add photos.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant photo library access to add photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const newPhotos = result.assets.map(asset => ({ uri: asset.uri, type: 'image' as const }));
+      setAttachedMedia(prev => [...prev, ...newPhotos]);
+    }
+  };
+
+  // Video picker - only one video allowed (exclusive with photos)
+  const handleVideoPress = async () => {
+    // Check if photos are already attached
+    const hasPhotos = attachedMedia.some(m => m.type === 'image');
+    if (hasPhotos) {
+      Alert.alert(
+        'Media Type Conflict',
+        'You already have photos attached. Remove them first to add a video.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Check if a video is already attached (only one video allowed)
+    const hasVideo = attachedMedia.some(m => m.type === 'video');
+    if (hasVideo) {
+      Alert.alert(
+        'Video Limit',
+        'Only one video can be attached at a time. Remove the current video first.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant photo library access to add videos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 0.8,
+      videoMaxDuration: 60, // 1 minute max
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      // expo-image-picker provides duration in milliseconds
+      const durationInSeconds = asset.duration ? Math.round(asset.duration / 1000) : 0;
+      setAttachedMedia([{ uri: asset.uri, type: 'video', duration: durationInSeconds }]);
+    }
+  };
+
+  // Mic press - navigate to audio entry
+  const handleMicPress = () => {
+    router.push('/entry-audio');
+  };
+
+  // Journal press - just focus the text input for now
+  const handleJournalPress = () => {
+    // Could open a journal template or just focus on writing
+    console.log('Journal mode');
+  };
+
+  // Remove attached media
+  const handleRemoveMedia = (index: number) => {
+    setAttachedMedia(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddLocation = async () => {
+    if (isLoadingLocation) return;
+
+    setIsLoadingLocation(true);
+    try {
+      // Request permissions
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant location permission to add your location.'
+        );
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      // Get current position
+      const position = await ExpoLocation.getCurrentPositionAsync({
+        accuracy: ExpoLocation.Accuracy.Balanced,
+      });
+
+      // Reverse geocode to get address
+      const addresses = await ExpoLocation.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      if (addresses.length > 0) {
+        const addr = addresses[0];
+        // Format location name (city, region or full address)
+        const locationName = addr.city || addr.subregion || addr.region ||
+          `${addr.street || ''} ${addr.name || ''}`.trim() ||
+          `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+        setLocation(locationName);
+        console.log('Location set:', locationName);
+      }
+    } catch (err) {
+      console.error('Failed to get location:', err);
+      Alert.alert('Error', 'Could not get your location. Please try again.');
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   const handleFoldIt = () => {
-    console.log('Folding text memory:', { textContent, selectedMood });
+    // Require mood selection
+    if (!selectedMood) {
+      Alert.alert('Choose a mood', 'Please select how you\'re feeling before folding.');
+      return;
+    }
+
+    // Require either text content OR attached media
+    if (!textContent.trim() && attachedMedia.length === 0) {
+      Alert.alert('Add something', 'Please write something or add media before folding.');
+      return;
+    }
+
+    // If we have attached media, handle appropriately
+    if (attachedMedia.length > 0) {
+      // Separate images and videos
+      const images = attachedMedia.filter(m => m.type === 'image');
+      const videos = attachedMedia.filter(m => m.type === 'video');
+
+      // Save all images as a single photo entry with photoUris array (slideshow)
+      if (images.length > 0) {
+        addEntry({
+          type: 'photo',
+          mood: selectedMood,
+          caption: textContent.trim() || undefined,
+          photoUris: images.map(img => img.uri),
+          photoUri: images[0].uri, // First image as primary
+          location: location || undefined,
+        });
+      }
+
+      // Save each video as separate entry
+      videos.forEach((video) => {
+        addEntry({
+          type: 'video',
+          mood: selectedMood,
+          caption: textContent.trim() || undefined,
+          videoUri: video.uri,
+          thumbnailUri: video.uri, // Use first frame as thumbnail
+          videoDuration: video.duration || 0,
+          location: location || undefined,
+        });
+      });
+    } else {
+      // No media, just text entry
+      addEntry({
+        type: 'text',
+        mood: selectedMood,
+        content: textContent.trim(),
+        location: location || undefined,
+      });
+    }
+
+    console.log('Folding memory:', { textContent, selectedMood, location, mediaCount: attachedMedia.length });
     router.back();
   };
 
@@ -91,18 +300,49 @@ export default function EntryTextScreen() {
         >
           {/* Text Input Card - rect x=17 y=130 w=358 h=400 rx=25 */}
           <View style={styles.textCard}>
-            <Text style={styles.textCardLabel}>How are you feeling right now?</Text>
+            <Text style={styles.textCardLabel}>
+              {attachedMedia.length > 0 ? 'Add a caption...' : 'How are you feeling right now?'}
+            </Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Write it down"
+              placeholder={attachedMedia.length > 0 ? 'Write a caption' : 'Write it down'}
               placeholderTextColor={COLORS.textLight}
               value={textContent}
               onChangeText={setTextContent}
               multiline
               textAlignVertical="top"
             />
-            {/* Media Toolbar - inside text card at bottom */}
-            <MediaToolbar />
+
+            {/* Attached Media Preview - above toolbar */}
+            {attachedMedia.length > 0 && (
+              <View style={styles.mediaPreviewContainer}>
+                {attachedMedia.map((media, index) => (
+                  <View key={index} style={styles.mediaPreviewItem}>
+                    <ExpoImage source={{ uri: media.uri }} style={styles.mediaPreviewImage} />
+                    {media.type === 'video' && (
+                      <View style={styles.videoIndicator}>
+                        <Text style={styles.videoIndicatorText}>▶</Text>
+                      </View>
+                    )}
+                    <Pressable
+                      style={styles.mediaRemoveButton}
+                      onPress={() => handleRemoveMedia(index)}
+                    >
+                      <Text style={styles.mediaRemoveText}>×</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Media Toolbar - at bottom of text card */}
+            <MediaToolbar
+              onPhotoPress={handlePhotoPress}
+              onVideoPress={handleVideoPress}
+              onMicPress={handleMicPress}
+              onJournalPress={handleJournalPress}
+              onLocationPress={handleAddLocation}
+            />
           </View>
 
           {/* Mood Section - from y=546 */}
@@ -111,6 +351,17 @@ export default function EntryTextScreen() {
             onMoodSelect={setSelectedMood}
             style={styles.moodSection}
           />
+
+          {/* Location tag - shows when location is added via MediaToolbar */}
+          {location && (
+            <View style={styles.locationTag}>
+              <LocationIcon size={14} />
+              <Text style={styles.locationTagText}>{location}</Text>
+              <Pressable onPress={() => setLocation(null)} style={styles.locationTagClose}>
+                <Text style={styles.locationTagCloseText}>×</Text>
+              </Pressable>
+            </View>
+          )}
 
           {/* Story Mode Link */}
           <Pressable onPress={handleStoryMode} style={styles.storyModeLink}>
@@ -231,5 +482,84 @@ const styles = StyleSheet.create({
     fontSize: 24 * SCALE,
     fontFamily: 'SignPainter',
     color: COLORS.white,
+  },
+  // Location tag
+  locationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12 * SCALE,
+    paddingVertical: 6 * SCALE,
+    borderRadius: 16 * SCALE,
+    gap: 6 * SCALE,
+    marginTop: 16 * SCALE,
+    alignSelf: 'flex-start',
+  },
+  locationTagText: {
+    color: COLORS.white,
+    fontSize: 12 * SCALE,
+    fontWeight: '500',
+  },
+  locationTagClose: {
+    marginLeft: 4 * SCALE,
+    padding: 2 * SCALE,
+  },
+  locationTagCloseText: {
+    color: COLORS.white,
+    fontSize: 16 * SCALE,
+    fontWeight: '600',
+    lineHeight: 16 * SCALE,
+  },
+  // Media preview
+  mediaPreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12 * SCALE,
+    marginTop: 12 * SCALE,
+    paddingTop: 8 * SCALE,
+    paddingRight: 8 * SCALE,
+  },
+  mediaPreviewItem: {
+    position: 'relative',
+    width: 64 * SCALE,
+    height: 64 * SCALE,
+  },
+  mediaPreviewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8 * SCALE,
+    overflow: 'hidden',
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8 * SCALE,
+  },
+  videoIndicatorText: {
+    color: COLORS.white,
+    fontSize: 16 * SCALE,
+  },
+  mediaRemoveButton: {
+    position: 'absolute',
+    top: -4 * SCALE,
+    right: -4 * SCALE,
+    width: 20 * SCALE,
+    height: 20 * SCALE,
+    borderRadius: 10 * SCALE,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaRemoveText: {
+    color: COLORS.white,
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
+    lineHeight: 16 * SCALE,
   },
 });

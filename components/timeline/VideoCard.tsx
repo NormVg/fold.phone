@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable, Image } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { ResizeMode, Video } from 'expo-av';
+import React, { useRef, useState } from 'react';
+import { Dimensions, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SCALE = SCREEN_WIDTH / 393;
 
 // Card dimensions
@@ -14,7 +16,9 @@ interface VideoCardProps {
   time?: string;
   duration?: string; // e.g., "01:24"
   thumbnailUri?: string;
+  videoUri?: string;
   mood?: string;
+  location?: string;
   onPlayPress?: () => void;
   onSharePress?: () => void;
   onLocationPress?: () => void;
@@ -99,75 +103,132 @@ export function VideoCard({
   time = '03:34 PM',
   duration = '01:24',
   thumbnailUri,
+  videoUri,
   mood = 'HAPPY',
+  location,
   onPlayPress,
   onSharePress,
   onLocationPress,
   onMoodPress,
 }: VideoCardProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const videoRef = useRef<Video>(null);
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
-  
+
+  const handleOpenFullscreen = () => {
+    setIsFullscreen(true);
+  };
+
+  const handleCloseFullscreen = async () => {
+    if (videoRef.current) {
+      await videoRef.current.pauseAsync();
+    }
+    setIsFullscreen(false);
+  };
+
   return (
-    <View style={styles.card}>
-      {/* Top section: Video icon + Title + Time */}
-      <View style={styles.topSection}>
-        <View style={styles.titleRow}>
-          <View style={styles.iconCircle}>
-            <VideoIcon size={16 * SCALE} />
+    <>
+      <View style={styles.card}>
+        {/* Top section: Video icon + Title + Time */}
+        <View style={styles.topSection}>
+          <View style={styles.titleRow}>
+            <View style={styles.iconCircle}>
+              <VideoIcon size={16 * SCALE} />
+            </View>
+            <Text style={styles.titleText}>{title}</Text>
           </View>
-          <Text style={styles.titleText}>{title}</Text>
+          <View style={styles.timeBadge}>
+            <Text style={styles.timeText}>{time}</Text>
+          </View>
         </View>
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeText}>{time}</Text>
+
+        {/* Middle section: Video thumbnail with play button */}
+        <Pressable onPress={handleOpenFullscreen} style={styles.videoContainer}>
+          {thumbnailUri ? (
+            <Image
+              source={{ uri: thumbnailUri }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.thumbnailPlaceholder} />
+          )}
+
+          {/* Play button overlay */}
+          <View style={styles.playOverlay}>
+            <PlayIcon size={56 * SCALE} />
+          </View>
+
+          {/* Duration badge */}
+          <View style={styles.durationBadge}>
+            <Text style={styles.durationText}>{duration}</Text>
+          </View>
+        </Pressable>
+
+        {/* Bottom section: Action buttons */}
+        <View style={styles.bottomSection}>
+          {/* Mood button */}
+          <Pressable style={styles.actionButton} onPress={onMoodPress}>
+            <MoodIcon size={16 * SCALE} />
+            <Text style={styles.actionText}>{mood}</Text>
+          </Pressable>
+
+          {/* Location button - only show if location is set */}
+          {location && (
+            <Pressable style={styles.actionButton} onPress={onLocationPress}>
+              <LocationIcon size={16 * SCALE} />
+              <Text style={styles.actionText}>{location}</Text>
+            </Pressable>
+          )}
+
+          {/* Spacer */}
+          <View style={{ flex: 1 }} />
+
+          {/* Share button */}
+          <Pressable style={styles.shareButton} onPress={onSharePress}>
+            <ShareIcon size={16 * SCALE} />
+          </Pressable>
         </View>
       </View>
-      
-      {/* Middle section: Video thumbnail with play button */}
-      <Pressable onPress={onPlayPress} style={styles.videoContainer}>
-        {thumbnailUri ? (
-          <Image 
-            source={{ uri: thumbnailUri }} 
-            style={styles.thumbnail}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.thumbnailPlaceholder} />
-        )}
-        
-        {/* Play button overlay */}
-        <View style={styles.playOverlay}>
-          <PlayIcon size={56 * SCALE} />
+
+      {/* Fullscreen Video Modal */}
+      <Modal
+        visible={isFullscreen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseFullscreen}
+      >
+        <View style={styles.modalContainer}>
+          {/* Close button */}
+          <Pressable style={styles.closeButton} onPress={handleCloseFullscreen}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </Pressable>
+
+          {/* Video Player */}
+          {videoUri ? (
+            <Video
+              ref={videoRef}
+              source={{ uri: videoUri }}
+              style={styles.fullscreenVideo}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={true}
+            />
+          ) : thumbnailUri ? (
+            <Image
+              source={{ uri: thumbnailUri }}
+              style={styles.fullscreenVideo}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.noVideoContainer}>
+              <VideoIcon size={80} />
+              <Text style={styles.noVideoText}>No video available</Text>
+            </View>
+          )}
         </View>
-        
-        {/* Duration badge */}
-        <View style={styles.durationBadge}>
-          <Text style={styles.durationText}>{duration}</Text>
-        </View>
-      </Pressable>
-      
-      {/* Bottom section: Action buttons */}
-      <View style={styles.bottomSection}>
-        {/* Mood button */}
-        <Pressable style={styles.actionButton} onPress={onMoodPress}>
-          <MoodIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>{mood}</Text>
-        </Pressable>
-        
-        {/* Location button */}
-        <Pressable style={styles.actionButton} onPress={onLocationPress}>
-          <LocationIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>LOCATION</Text>
-        </Pressable>
-        
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-        
-        {/* Share button */}
-        <Pressable style={styles.shareButton} onPress={onSharePress}>
-          <ShareIcon size={16 * SCALE} />
-        </Pressable>
-      </View>
-    </View>
+      </Modal>
+    </>
   );
 }
 
@@ -284,6 +345,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#181717',
   },
+  // Fullscreen modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  fullscreenVideo: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.6,
+  },
+  noVideoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noVideoText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
 });
 
 export default VideoCard;
+

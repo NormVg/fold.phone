@@ -339,6 +339,49 @@ export default function MainScreen() {
                             content={entry.content || ''}
                             time={time}
                             mood={mood}
+                            location={entry.location}
+                            onSharePress={handleSharePress}
+                            onLocationPress={handleLocationPress}
+                            onMoodPress={handleMoodPress}
+                          />
+                        </View>
+                      );
+                    }
+
+                    if (entry.type === 'photo') {
+                      return (
+                        <View key={entry.id} style={styles.cardWrapper}>
+                          <PhotoCard
+                            title={entry.caption || 'Photo'}
+                            time={time}
+                            imageUri={entry.photoUri}
+                            imageUris={entry.photoUris}
+                            mood={mood}
+                            location={entry.location}
+                            onSharePress={handleSharePress}
+                            onLocationPress={handleLocationPress}
+                            onMoodPress={handleMoodPress}
+                          />
+                        </View>
+                      );
+                    }
+
+                    if (entry.type === 'video') {
+                      const formatDuration = (seconds: number) => {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                      };
+                      return (
+                        <View key={entry.id} style={styles.cardWrapper}>
+                          <VideoCard
+                            title={entry.caption || 'Video'}
+                            time={time}
+                            duration={formatDuration(entry.videoDuration || 0)}
+                            thumbnailUri={entry.thumbnailUri}
+                            videoUri={entry.videoUri}
+                            mood={mood}
+                            location={entry.location}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
                             onMoodPress={handleMoodPress}
