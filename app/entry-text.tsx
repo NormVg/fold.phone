@@ -161,10 +161,9 @@ export default function EntryTextScreen() {
     router.push('/entry-audio');
   };
 
-  // Journal press - just focus the text input for now
+  // Journal press - navigate to story entry page
   const handleJournalPress = () => {
-    // Could open a journal template or just focus on writing
-    console.log('Journal mode');
+    router.push('/entry-story');
   };
 
   // Remove attached media
@@ -274,8 +273,7 @@ export default function EntryTextScreen() {
   };
 
   const handleStoryMode = () => {
-    console.log('Navigate to story mode');
-    // TODO: Navigate to story mode screen
+    router.replace('/entry-story');
   };
 
   return (
@@ -342,6 +340,8 @@ export default function EntryTextScreen() {
               onMicPress={handleMicPress}
               onJournalPress={handleJournalPress}
               onLocationPress={handleAddLocation}
+              location={location}
+              onClearLocation={() => setLocation(null)}
             />
           </View>
 
@@ -351,17 +351,6 @@ export default function EntryTextScreen() {
             onMoodSelect={setSelectedMood}
             style={styles.moodSection}
           />
-
-          {/* Location tag - shows when location is added via MediaToolbar */}
-          {location && (
-            <View style={styles.locationTag}>
-              <LocationIcon size={14} />
-              <Text style={styles.locationTagText}>{location}</Text>
-              <Pressable onPress={() => setLocation(null)} style={styles.locationTagClose}>
-                <Text style={styles.locationTagCloseText}>×</Text>
-              </Pressable>
-            </View>
-          )}
 
           {/* Story Mode Link */}
           <Pressable onPress={handleStoryMode} style={styles.storyModeLink}>

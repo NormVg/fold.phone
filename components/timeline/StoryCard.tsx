@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -16,6 +16,8 @@ export interface StoryCardProps {
   content: string; // Full story content
   time?: string;
   mood?: string;
+  location?: string; // Location name
+  pageCount?: number; // Number of pages in the story
   readTime?: string; // e.g., "3 min read"
   onSharePress?: () => void;
   onLocationPress?: () => void;
@@ -121,6 +123,8 @@ export function StoryCard({
   content,
   time = '03:34 PM',
   mood = 'HAPPY',
+  location,
+  pageCount,
   readTime,
   onSharePress,
   onLocationPress,
@@ -129,11 +133,12 @@ export function StoryCard({
   const router = useRouter();
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
   const estimatedReadTime = readTime || calculateReadTime(content);
-  
+  const pageLabel = pageCount && pageCount > 0 ? `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}` : null;
+
   const handlePress = () => {
     router.push({
       pathname: '/story/[id]',
-      params: { 
+      params: {
         id,
         title,
         content,
@@ -142,7 +147,7 @@ export function StoryCard({
       },
     });
   };
-  
+
   return (
     <Pressable style={styles.card} onPress={handlePress}>
       {/* Top section: Story icon + Title + Time */}
@@ -157,23 +162,23 @@ export function StoryCard({
           <Text style={styles.timeText}>{time}</Text>
         </View>
       </View>
-      
+
       {/* Middle section: Story preview */}
       <View style={styles.contentContainer}>
         <Text style={styles.contentText} numberOfLines={MAX_PREVIEW_LINES}>
           {content}
         </Text>
-        
+
         {/* Read more indicator */}
         <View style={styles.readMoreRow}>
-          <Text style={styles.readTimeText}>{estimatedReadTime}</Text>
+          <Text style={styles.readTimeText}>{pageLabel ? `${pageLabel} · ` : ''}{estimatedReadTime}</Text>
           <View style={styles.readMoreButton}>
             <Text style={styles.readMoreText}>Continue reading</Text>
             <ArrowRightIcon size={14 * SCALE} />
           </View>
         </View>
       </View>
-      
+
       {/* Bottom section: Action buttons */}
       <View style={styles.bottomSection}>
         {/* Mood button */}
@@ -181,16 +186,18 @@ export function StoryCard({
           <MoodIcon size={16 * SCALE} />
           <Text style={styles.actionText}>{mood}</Text>
         </Pressable>
-        
-        {/* Location button */}
-        <Pressable style={styles.actionButton} onPress={onLocationPress}>
-          <LocationIcon size={16 * SCALE} />
-          <Text style={styles.actionText}>LOCATION</Text>
-        </Pressable>
-        
+
+        {/* Location button - only show if location is set */}
+        {location && (
+          <Pressable style={styles.actionButton} onPress={onLocationPress}>
+            <LocationIcon size={16 * SCALE} />
+            <Text style={styles.actionText}>{location}</Text>
+          </Pressable>
+        )}
+
         {/* Spacer */}
         <View style={{ flex: 1 }} />
-        
+
         {/* Share button */}
         <Pressable style={styles.shareButton} onPress={onSharePress}>
           <ShareIcon size={16 * SCALE} />

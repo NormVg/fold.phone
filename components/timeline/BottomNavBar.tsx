@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { CaptureAddIcon, GridIcon, ProfileIcon } from '@/components/icons';
 import { TimelineColors } from '@/constants/theme';
-import { GridIcon, CaptureAddIcon, ProfileIcon } from '@/components/icons';
+import React from 'react';
+import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
@@ -30,7 +30,7 @@ export function BottomNavBar({
     <View style={styles.container}>
       <View style={styles.navBar}>
         {/* Grid/Hub button */}
-        <Pressable 
+        <Pressable
           style={styles.navButton}
           onPress={onGridPress}
           accessibilityLabel="Hub"
@@ -38,14 +38,14 @@ export function BottomNavBar({
         >
           {/* Highlight background for hub - rounded rect 32x32, rx=5 */}
           {isHubActive && <View style={styles.hubHighlight} />}
-          <GridIcon 
-            size={22 * SCALE} 
-            color={TimelineColors.primary} 
+          <GridIcon
+            size={22 * SCALE}
+            color={TimelineColors.primary}
           />
         </Pressable>
 
         {/* Capture/Add button (center) */}
-        <Pressable 
+        <Pressable
           style={styles.captureButton}
           onPress={onCapturePress}
           onLongPress={onCaptureLongPress}
@@ -53,15 +53,15 @@ export function BottomNavBar({
           accessibilityLabel="Capture"
           accessibilityRole="button"
         >
-          <CaptureAddIcon 
-            size={38 * SCALE} 
+          <CaptureAddIcon
+            size={38 * SCALE}
             color={TimelineColors.primary}
             backgroundColor={TimelineColors.captureButtonBackground}
           />
         </Pressable>
 
         {/* Profile button */}
-        <Pressable 
+        <Pressable
           style={styles.navButton}
           onPress={onProfilePress}
           accessibilityLabel="Profile"
@@ -69,9 +69,9 @@ export function BottomNavBar({
         >
           {/* Highlight background for profile - circle 32x32, rx=16 */}
           {isProfileActive && <View style={styles.profileHighlight} />}
-          <ProfileIcon 
-            size={26 * SCALE} 
-            color={TimelineColors.primary} 
+          <ProfileIcon
+            size={26 * SCALE}
+            color={TimelineColors.primary}
           />
         </Pressable>
       </View>

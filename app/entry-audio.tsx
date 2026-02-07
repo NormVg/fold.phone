@@ -141,6 +141,67 @@ function LocationIcon({ size = 37 }: { size?: number }) {
   );
 }
 
+// Small white location icon for tag
+function LocationTagIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C8.13401 2 5 5.13401 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13401 15.866 2 12 2Z"
+        fill="white"
+      />
+    </Svg>
+  );
+}
+
+// Animated Location Tag component
+function AnimatedLocationTag({
+  location,
+  onClear
+}: {
+  location: string;
+  onClear: () => void;
+}) {
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Animate in when mounted
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.animatedLocationTag,
+        {
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        }
+      ]}
+    >
+      <LocationTagIcon size={12} />
+      <Text style={styles.animatedLocationTagText} numberOfLines={1}>
+        {location.length > 12 ? location.substring(0, 12) + '...' : location}
+      </Text>
+      <Pressable onPress={onClear} style={styles.animatedLocationTagClose}>
+        <Text style={styles.animatedLocationTagCloseText}>×</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 // Audio waveform bars - responds to real microphone metering
 function AudioWaveform({ isRecording, meterLevel }: { isRecording: boolean; meterLevel: number }) {
   const NUM_BARS = 10;
@@ -568,31 +629,29 @@ export default function NewMemoryScreen() {
                 onChangeText={setCaption}
                 multiline
               />
-              <Pressable
-                style={({ pressed }) => [
-                  styles.captionAddButton,
-                  {
-                    opacity: pressed || isLoadingLocation ? 0.7 : 1,
-                    transform: [{ scale: pressed ? 0.95 : 1 }],
-                  }
-                ]}
-                onPress={handleAddLocation}
-                disabled={isLoadingLocation}
-              >
-                <LocationIcon size={37} />
-              </Pressable>
-            </View>
 
-            {/* Location tag */}
-            {location && (
-              <View style={styles.locationTag}>
-                <LocationIcon size={14} />
-                <Text style={styles.locationTagText}>{location}</Text>
-                <Pressable onPress={() => setLocation(null)} style={styles.locationTagClose}>
-                  <Text style={styles.locationTagCloseText}>×</Text>
+              {/* Show animated tag if location is set, otherwise show location icon */}
+              {location ? (
+                <AnimatedLocationTag
+                  location={location}
+                  onClear={() => setLocation(null)}
+                />
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.captionAddButton,
+                    {
+                      opacity: pressed || isLoadingLocation ? 0.7 : 1,
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
+                    }
+                  ]}
+                  onPress={handleAddLocation}
+                  disabled={isLoadingLocation}
+                >
+                  <LocationIcon size={37} />
                 </Pressable>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         </ScrollView>
 
@@ -793,5 +852,31 @@ const styles = StyleSheet.create({
     fontSize: 16 * SCALE,
     fontWeight: '600',
     lineHeight: 16 * SCALE,
+  },
+  animatedLocationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10 * SCALE,
+    paddingVertical: 6 * SCALE,
+    borderRadius: 16 * SCALE,
+    gap: 4 * SCALE,
+    height: 37 * SCALE,
+  },
+  animatedLocationTagText: {
+    color: '#FFFFFF',
+    fontSize: 11 * SCALE,
+    fontWeight: '500',
+    maxWidth: 70 * SCALE,
+  },
+  animatedLocationTagClose: {
+    marginLeft: 2 * SCALE,
+    padding: 2 * SCALE,
+  },
+  animatedLocationTagCloseText: {
+    color: '#FFFFFF',
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
+    lineHeight: 14 * SCALE,
   },
 });

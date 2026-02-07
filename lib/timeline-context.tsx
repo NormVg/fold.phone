@@ -30,6 +30,8 @@ export interface TimelineEntry {
   // Story entry
   title?: string;
   storyContent?: string;
+  pageCount?: number;
+  storyMedia?: { uri: string; type: 'image' | 'video'; duration?: number }[];
 }
 
 interface TimelineContextValue {

@@ -43,42 +43,15 @@ function VideoIcon({ size = ICON_SIZE }: IconProps) {
   );
 }
 
-// Mic icon - Exact path from design, centered in 37x37 viewBox
-function MicIcon({ size = ICON_SIZE }: IconProps) {
+// Location/Pin icon
+function LocationIcon({ size = ICON_SIZE }: IconProps) {
   return (
     <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 37 37" fill="none">
       <Circle cx="18.5" cy="18.5" r="18.5" fill={COLORS.primary} fillOpacity="0.2" />
       <Path
-        d="M7.14781 11.4353V5.71781C7.14781 4.58053 7.5996 3.48983 8.40378 2.68565C9.20795 1.88147 10.2987 1.42969 11.4359 1.42969C12.5732 1.42969 13.6639 1.88147 14.4681 2.68565C15.2723 3.48983 15.7241 4.58053 15.7241 5.71781V11.4353C15.7241 12.5726 15.2723 13.6633 14.4681 14.4675C13.6639 15.2717 12.5732 15.7234 11.4359 15.7234C10.2987 15.7234 9.20795 15.2717 8.40378 14.4675C7.5996 13.6633 7.14781 12.5726 7.14781 11.4353ZM18.5828 11.4353C18.5828 11.2458 18.5075 11.064 18.3735 10.93C18.2395 10.7959 18.0577 10.7206 17.8681 10.7206C17.6786 10.7206 17.4968 10.7959 17.3628 10.93C17.2287 11.064 17.1534 11.2458 17.1534 11.4353C17.1534 12.9517 16.5511 14.406 15.4788 15.4782C14.4066 16.5504 12.9523 17.1528 11.4359 17.1528C9.91956 17.1528 8.46529 16.5504 7.39305 15.4782C6.32082 14.406 5.71844 12.9517 5.71844 11.4353C5.71844 11.2458 5.64314 11.064 5.50911 10.93C5.37508 10.7959 5.1933 10.7206 5.00375 10.7206C4.8142 10.7206 4.63242 10.7959 4.49839 10.93C4.36436 11.064 4.28906 11.2458 4.28906 11.4353C4.29124 13.2064 4.95008 14.9138 6.13818 16.2273C7.32627 17.5409 8.95923 18.3672 10.7213 18.5465V21.4409C10.7213 21.6305 10.7965 21.8123 10.9306 21.9463C11.0646 22.0803 11.2464 22.1556 11.4359 22.1556C11.6255 22.1556 11.8073 22.0803 11.9413 21.9463C12.0753 21.8123 12.1506 21.6305 12.1506 21.4409V18.5465C13.9127 18.3672 15.5456 17.5409 16.7337 16.2273C17.9218 14.9138 18.5806 13.2064 18.5828 11.4353Z"
+        d="M11.4356 1.42969C8.13401 1.42969 5 4.56369 5 7.86531C5 13.1153 11.4356 19.5509 11.4356 19.5509C11.4356 19.5509 17.8713 13.1153 17.8713 7.86531C17.8713 4.56369 14.7372 1.42969 11.4356 1.42969ZM11.4356 10.7241C10.8686 10.7241 10.3147 10.556 9.8455 10.2411C9.37627 9.92617 9.01299 9.47861 8.80092 8.95543C8.58886 8.43225 8.53758 7.85721 8.65352 7.30306C8.76945 6.74892 9.04746 6.24073 9.44852 5.83967C9.84958 5.43861 10.3578 5.1606 10.9119 5.04466C11.4661 4.92873 12.0411 4.98001 12.5643 5.19207C13.0875 5.40414 13.535 5.76742 13.8499 6.23665C14.1649 6.70587 14.3329 7.25974 14.3329 7.82672C14.3329 8.59498 14.0276 9.33172 13.4227 9.93679C12.8178 10.5419 12.0809 10.8471 11.3127 10.8471L11.4356 10.7241Z"
         fill={COLORS.primary}
         transform="translate(7, 7)"
-      />
-    </Svg>
-  );
-}
-
-// Journal/Book icon - Exact path from design, centered in 37x37 viewBox
-function JournalIcon({ size = ICON_SIZE }: IconProps) {
-  return (
-    <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 37 37" fill="none">
-      <Circle cx="18.5" cy="18.5" r="18.5" fill={COLORS.primary} fillOpacity="0.2" />
-      <Path
-        d="M19.2973 2.85922V17.153C19.2973 17.3425 19.222 17.5243 19.088 17.6583C18.954 17.7924 18.7722 17.8677 18.5827 17.8677H6.43297C6.05387 17.8677 5.69031 18.0183 5.42225 18.2863C5.15419 18.5544 5.00359 18.9179 5.00359 19.297H17.1533C17.3428 19.297 17.5246 19.3723 17.6586 19.5064C17.7927 19.6404 17.868 19.8222 17.868 20.0117C17.868 20.2013 17.7927 20.383 17.6586 20.5171C17.5246 20.6511 17.3428 20.7264 17.1533 20.7264H4.28891C4.09936 20.7264 3.91758 20.6511 3.78355 20.5171C3.64952 20.383 3.57422 20.2013 3.57422 20.0117V5.00328C3.57422 4.24509 3.87541 3.51796 4.41153 2.98184C4.94765 2.44572 5.67478 2.14453 6.43297 2.14453H18.5827C18.7722 2.14453 18.954 2.21983 19.088 2.35386C19.222 2.48789 19.2973 2.66967 19.2973 2.85922Z"
-        fill={COLORS.primary}
-        transform="translate(7, 7)"
-      />
-    </Svg>
-  );
-}
-
-// Location icon - from new-memory.tsx, centered in 37x37 viewBox
-function AddLocationIcon({ size = ICON_SIZE }: IconProps) {
-  return (
-    <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 37 37" fill="none">
-      <Circle cx="18.5" cy="18.5" r="18.5" fill={COLORS.primary} fillOpacity="0.2" />
-      <Path
-        d="M18.5 10C15.19 10 12.5 12.69 12.5 16C12.5 20.5 18.5 27 18.5 27C18.5 27 24.5 20.5 24.5 16C24.5 12.69 21.81 10 18.5 10ZM18.5 18.5C17.12 18.5 16 17.38 16 16C16 14.62 17.12 13.5 18.5 13.5C19.88 13.5 21 14.62 21 16C21 17.38 19.88 18.5 18.5 18.5Z"
-        fill={COLORS.primary}
       />
     </Svg>
   );
@@ -96,15 +69,20 @@ function LocationTagIcon({ size = 12 }: IconProps) {
   );
 }
 
-// Media button wrapper
-function MediaButton({ onPress, children }: { onPress?: () => void; children: React.ReactNode }) {
+// Simple pressable wrapper for media buttons
+function MediaButton({
+  children,
+  onPress
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.7 : 1,
-        transform: [{ scale: pressed ? 0.95 : 1 }],
-      })}
+      style={({ pressed }) => [
+        { opacity: pressed ? 0.7 : 1 }
+      ]}
     >
       {children}
     </Pressable>
@@ -151,7 +129,7 @@ function AnimatedLocationTag({
     >
       <LocationTagIcon size={12} />
       <Text style={styles.locationTagText} numberOfLines={1}>
-        {location.length > 12 ? location.substring(0, 12) + '...' : location}
+        {location.length > 15 ? location.substring(0, 15) + '...' : location}
       </Text>
       <Pressable onPress={onClear} style={styles.locationTagClose}>
         <Text style={styles.locationTagCloseText}>×</Text>
@@ -160,44 +138,31 @@ function AnimatedLocationTag({
   );
 }
 
-export interface MediaToolbarProps {
+export interface StoryMediaToolbarProps {
   onPhotoPress?: () => void;
   onVideoPress?: () => void;
-  onMicPress?: () => void;
-  onJournalPress?: () => void;
   onLocationPress?: () => void;
   location?: string | null;
   onClearLocation?: () => void;
 }
 
-export function MediaToolbar({
+export function StoryMediaToolbar({
   onPhotoPress,
   onVideoPress,
-  onMicPress,
-  onJournalPress,
   onLocationPress,
   location,
   onClearLocation,
-}: MediaToolbarProps) {
+}: StoryMediaToolbarProps) {
   return (
     <View style={styles.container}>
-      {/* Left group - 4 icons */}
-      <View style={styles.leftGroup}>
-        <MediaButton onPress={onPhotoPress}>
-          <PhotoIcon />
-        </MediaButton>
-        <MediaButton onPress={onVideoPress}>
-          <VideoIcon />
-        </MediaButton>
-        <MediaButton onPress={onMicPress}>
-          <MicIcon />
-        </MediaButton>
-        <MediaButton onPress={onJournalPress}>
-          <JournalIcon />
-        </MediaButton>
-      </View>
+      <MediaButton onPress={onPhotoPress}>
+        <PhotoIcon />
+      </MediaButton>
+      <MediaButton onPress={onVideoPress}>
+        <VideoIcon />
+      </MediaButton>
 
-      {/* Right - Location icon or animated tag */}
+      {/* Show animated location tag if location is set, otherwise show location icon */}
       {location ? (
         <AnimatedLocationTag
           location={location}
@@ -205,7 +170,7 @@ export function MediaToolbar({
         />
       ) : (
         <MediaButton onPress={onLocationPress}>
-          <AddLocationIcon />
+          <LocationIcon />
         </MediaButton>
       )}
     </View>
@@ -214,13 +179,6 @@ export function MediaToolbar({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingTop: 16 * SCALE,
-  },
-  leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8 * SCALE,
@@ -239,7 +197,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11 * SCALE,
     fontWeight: '500',
-    maxWidth: 70 * SCALE,
+    maxWidth: 80 * SCALE,
   },
   locationTagClose: {
     marginLeft: 2 * SCALE,
@@ -253,4 +211,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MediaToolbar;
+export default StoryMediaToolbar;

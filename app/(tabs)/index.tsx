@@ -105,6 +105,7 @@ export default function MainScreen() {
   const handleGridPress = () => navigateToPage(PAGE_HUB);
   const handleCapturePress = () => router.push('/entry-text'); // Tap -> text entry
   const handleCaptureLongPress = () => router.push('/entry-audio'); // Long press -> voice recording
+  const handleCaptureDoubleTap = () => router.push('/entry-story'); // Double tap -> story mode
   const handleProfilePress = () => navigateToPage(PAGE_PROFILE);
 
   // Hub handlers
@@ -382,6 +383,25 @@ export default function MainScreen() {
                             videoUri={entry.videoUri}
                             mood={mood}
                             location={entry.location}
+                            onSharePress={handleSharePress}
+                            onLocationPress={handleLocationPress}
+                            onMoodPress={handleMoodPress}
+                          />
+                        </View>
+                      );
+                    }
+
+                    if (entry.type === 'story') {
+                      return (
+                        <View key={entry.id} style={styles.cardWrapper}>
+                          <StoryCard
+                            id={entry.id}
+                            title={entry.title || 'Untitled Story'}
+                            content={entry.storyContent || entry.content || ''}
+                            time={time}
+                            mood={mood}
+                            location={entry.location}
+                            pageCount={entry.pageCount}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
                             onMoodPress={handleMoodPress}
