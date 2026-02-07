@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { MoodPicker, type MoodType } from '@/components/mood';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  TextInput,
   ScrollView,
-  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import Svg, { Path, Circle, Rect, Line, G } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -25,33 +28,7 @@ const COLORS = {
   textLight: 'rgba(0, 0, 0, 0.5)',
   white: '#FDFBF7',
   buttonBorder: 'rgba(0, 0, 0, 0.25)',
-  // Mood colors from SVG
-  vSad: '#DCBCBC',
-  sad: '#E5D4D4',
-  normal: '#E5E3D4',
-  happy: '#D4E5D5',
-  vHappy: '#BCDCBE',
 };
-
-// Mood types
-type MoodType = 'V. Sad' | 'Sad' | 'Normal' | 'Happy' | 'V. Happy';
-
-// Mood images
-const MOOD_IMAGES = {
-  'V. Sad': require('@/assets/images/emotion/v-sad.png'),
-  'Sad': require('@/assets/images/emotion/sad.png'),
-  'Normal': require('@/assets/images/emotion/normal.png'),
-  'Happy': require('@/assets/images/emotion/happy.png'),
-  'V. Happy': require('@/assets/images/emotion/v-happy.png'),
-};
-
-const MOODS: { type: MoodType; bgColor: string }[] = [
-  { type: 'V. Sad', bgColor: COLORS.vSad },
-  { type: 'Sad', bgColor: COLORS.sad },
-  { type: 'Normal', bgColor: COLORS.normal },
-  { type: 'Happy', bgColor: COLORS.happy },
-  { type: 'V. Happy', bgColor: COLORS.vHappy },
-];
 
 // Close X icon in maroon circle - from SVG path
 function CloseButton({ size = 48.54, onPress }: { size?: number; onPress: () => void }) {
@@ -68,42 +45,45 @@ function CloseButton({ size = 48.54, onPress }: { size?: number; onPress: () => 
   );
 }
 
-// Reset/Undo icon - circular arrow from SVG
+// Reset/Undo icon - exact path from design
 function ResetIcon({ size = 60 }: { size?: number }) {
   return (
     <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 60 60" fill="none">
       <Circle cx="30" cy="30" r="30" fill={COLORS.white} />
       <Circle cx="30" cy="30" r="29.5" stroke={COLORS.buttonBorder} />
       <Path
-        d="M21.8652 30.457C21.8652 32.157 22.3693 33.818 23.3136 35.232C24.2579 36.645 25.6001 37.747 27.1704 38.397C28.7408 39.047 30.4687 39.218 32.1358 38.886C33.8028 38.554 35.334 37.736 36.536 36.534C37.738 35.332 38.556 33.801 38.888 32.134C39.22 30.467 39.049 28.739 38.399 27.168C37.748 25.598 36.647 24.256 35.234 23.312C33.8204 22.367 32.1589 21.863 30.4592 21.863C28.0566 21.872 25.7506 22.81 24.0233 24.48L21.8652 26.638"
+        d="M2.86523 11.4572C2.86523 13.1569 3.36926 14.8185 4.31358 16.2318C5.25789 17.645 6.60008 18.7465 8.17042 19.397C9.74076 20.0474 11.4687 20.2176 13.1358 19.886C14.8028 19.5544 16.3341 18.7359 17.536 17.5341C18.7379 16.3322 19.5564 14.8009 19.888 13.1338C20.2196 11.4668 20.0494 9.7388 19.3989 8.16846C18.7485 6.59813 17.647 5.25594 16.2337 4.31162C14.8204 3.36731 13.1589 2.86328 11.4592 2.86328C9.05665 2.87232 6.75062 3.80978 5.02327 5.47966L2.86523 7.63769"
         stroke={COLORS.text}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        transform="translate(18.5, 18.5)"
       />
       <Path
-        d="M21.8652 21.863V26.638H26.6396"
+        d="M2.86523 2.86328V7.63769H7.63965"
         stroke={COLORS.text}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        transform="translate(18.5, 18.5)"
       />
     </Svg>
   );
 }
 
-// Checkmark icon from SVG
+// Checkmark icon - exact path from design
 function CheckIcon({ size = 60 }: { size?: number }) {
   return (
     <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 60 60" fill="none">
       <Circle cx="30" cy="30" r="30" fill={COLORS.white} />
       <Circle cx="30" cy="30" r="29.5" stroke={COLORS.buttonBorder} />
       <Path
-        d="M40.1 24.73L29.595 35.235L24.82 30.46"
+        d="M19.1003 5.73047L8.59531 16.2355L3.82031 11.4605"
         stroke={COLORS.text}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        transform="translate(18.5, 18.5)"
       />
     </Svg>
   );
@@ -115,7 +95,7 @@ function RecordButton({ isRecording, onPress }: { isRecording: boolean; onPress:
   const outerRadius = 50.5;
   const innerRadius = 20.2;
   const size = 101;
-  
+
   return (
     <Pressable onPress={onPress}>
       <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 101 101" fill="none">
@@ -144,53 +124,68 @@ function RecordButtonSimple({ isRecording, onPress }: { isRecording: boolean; on
   );
 }
 
-// Plus icon for caption - simple circle with +
-function PlusIcon({ size = 37 }: { size?: number }) {
+// Location icon for caption - pin marker
+function LocationIcon({ size = 37 }: { size?: number }) {
   return (
     <Svg width={size * SCALE} height={size * SCALE} viewBox="0 0 37 37" fill="none">
       <Circle cx="18.5" cy="18.5" r="18.5" fill={COLORS.primary} fillOpacity="0.2" />
-      <Line x1="18.5" y1="11" x2="18.5" y2="26" stroke={COLORS.primary} strokeWidth="2" strokeLinecap="round" />
-      <Line x1="11" y1="18.5" x2="26" y2="18.5" stroke={COLORS.primary} strokeWidth="2" strokeLinecap="round" />
+      <Path
+        d="M18.5 10C15.19 10 12.5 12.69 12.5 16C12.5 20.5 18.5 27 18.5 27C18.5 27 24.5 20.5 24.5 16C24.5 12.69 21.81 10 18.5 10ZM18.5 18.5C17.12 18.5 16 17.38 16 16C16 14.62 17.12 13.5 18.5 13.5C19.88 13.5 21 14.62 21 16C21 17.38 19.88 18.5 18.5 18.5Z"
+        fill={COLORS.primary}
+      />
     </Svg>
   );
 }
 
-// Audio waveform bars - exact from SVG design
+// Audio waveform bars - smooth animated version
 function AudioWaveform({ isRecording }: { isRecording: boolean }) {
-  // Bar positions and heights from SVG (relative to center)
-  const barsData = [
-    { x: 120, height: 39 },  // 347-308
-    { x: 136, height: 48 },  // 342-294... approximated
-    { x: 152, height: 82 },
-    { x: 168, height: 51 },
-    { x: 184, height: 44 },
-    { x: 200, height: 57 },
-    { x: 216, height: 56 },
-    { x: 232, height: 69 },
-    { x: 248, height: 57 },
-    { x: 264, height: 34 },
-  ];
-  
-  const [bars, setBars] = useState(barsData.map(b => b.height));
-  
+  const NUM_BARS = 10;
+  const animatedHeights = useRef(
+    Array.from({ length: NUM_BARS }, () => new Animated.Value(40))
+  ).current;
+
   useEffect(() => {
-    if (!isRecording) return;
-    
-    const interval = setInterval(() => {
-      setBars(barsData.map(b => Math.random() * 50 + 30));
-    }, 100);
-    
-    return () => clearInterval(interval);
+    if (!isRecording) {
+      // Reset to static heights when not recording
+      animatedHeights.forEach((anim, i) => {
+        Animated.timing(anim, {
+          toValue: 40 + (i % 3) * 10,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+      });
+      return;
+    }
+
+    // Animate each bar with staggered timing for smooth wave effect
+    const animateBars = () => {
+      const animations = animatedHeights.map((anim, index) => {
+        const targetHeight = Math.random() * 50 + 30;
+        return Animated.timing(anim, {
+          toValue: targetHeight,
+          duration: 150 + Math.random() * 100, // Vary duration for organic feel
+          useNativeDriver: false,
+        });
+      });
+
+      Animated.parallel(animations).start(() => {
+        if (isRecording) {
+          animateBars();
+        }
+      });
+    };
+
+    animateBars();
   }, [isRecording]);
-  
+
   return (
     <View style={styles.waveformContainer}>
-      {bars.map((height, index) => (
-        <View
+      {animatedHeights.map((animHeight, index) => (
+        <Animated.View
           key={index}
           style={[
             styles.waveformBar,
-            { height: height * SCALE },
+            { height: Animated.multiply(animHeight, SCALE) },
           ]}
         />
       ))}
@@ -211,7 +206,7 @@ export default function NewMemoryScreen() {
     timerRef.current = setInterval(() => {
       setRecordingTime(prev => prev + 1);
     }, 1000);
-    
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -268,85 +263,80 @@ export default function NewMemoryScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* Tagline - "Unfold your mind." */}
-        <Text style={styles.tagline}>Unfold your mind.</Text>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Tagline - "Unfold your mind." */}
+          <Text style={styles.tagline}>Unfold your mind.</Text>
 
-        {/* Recording Card - rect x=17 y=173 w=358 h=400 rx=25 */}
-        <View style={styles.recordingCard}>
-          {/* Timer - large centered text */}
-          <Text style={styles.timer}>{formatTime(recordingTime)}</Text>
+          {/* Recording Card - rect x=17 y=173 w=358 h=400 rx=25 */}
+          <View style={styles.recordingCard}>
+            {/* Timer - large centered text */}
+            <Text style={styles.timer}>{formatTime(recordingTime)}</Text>
 
-          {/* Waveform */}
-          <AudioWaveform isRecording={isRecording} />
+            {/* Waveform */}
+            <AudioWaveform isRecording={isRecording} />
 
-          {/* Controls - Reset, Record, Confirm */}
-          <View style={styles.controls}>
-            <Pressable onPress={handleReset} style={styles.controlButton}>
-              <ResetIcon size={60} />
-            </Pressable>
+            {/* Controls - Reset, Record, Confirm */}
+            <View style={styles.controls}>
+              <Pressable onPress={handleReset} style={styles.controlButton}>
+                <ResetIcon size={60} />
+              </Pressable>
 
-            <RecordButtonSimple isRecording={isRecording} onPress={handleToggleRecording} />
+              <RecordButtonSimple isRecording={isRecording} onPress={handleToggleRecording} />
 
-            <Pressable onPress={handleConfirm} style={styles.controlButton}>
-              <CheckIcon size={60} />
-            </Pressable>
+              <Pressable onPress={handleConfirm} style={styles.controlButton}>
+                <CheckIcon size={60} />
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-        {/* Mood Section - rect x=17 y=589 w=358 h=136 rx=25 */}
-        <View style={styles.moodSection}>
-          <Text style={styles.sectionLabel}>How you feeling right now?</Text>
-          <View style={styles.moodOptions}>
-            {MOODS.map((mood) => (
-              <View key={mood.type} style={styles.moodButtonWrapper}>
-                <Pressable
-                  style={[
-                    styles.moodButton,
-                    selectedMood === mood.type && styles.moodButtonSelected,
-                  ]}
-                  onPress={() => setSelectedMood(mood.type)}
-                >
-                  <Image 
-                    source={MOOD_IMAGES[mood.type]} 
-                    style={styles.moodImage}
-                    resizeMode="contain"
-                  />
-                </Pressable>
-              </View>
-            ))}
+          {/* Mood Section */}
+          <MoodPicker
+            selectedMood={selectedMood}
+            onMoodSelect={setSelectedMood}
+            style={styles.moodSection}
+          />
+
+          {/* Caption Section */}
+          <View style={styles.captionSection}>
+            <Text style={styles.captionLabel}>Caption this?</Text>
+            <View style={styles.captionInputContainer}>
+              <TextInput
+                style={styles.captionInput}
+                placeholder="thinking...."
+                placeholderTextColor={COLORS.textLight}
+                value={caption}
+                onChangeText={setCaption}
+                multiline
+              />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.captionAddButton,
+                  { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }
+                ]}
+              >
+                <LocationIcon size={37} />
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
-        {/* Caption Section - rect x=17 y=741 w=358 h=136 rx=25 */}
-        <View style={styles.captionSection}>
-          <Text style={styles.sectionLabel}>Caption this?</Text>
-          <View style={styles.captionInputContainer}>
-            <TextInput
-              style={styles.captionInput}
-              placeholder="thinking...."
-              placeholderTextColor={COLORS.textLight}
-              value={caption}
-              onChangeText={setCaption}
-              multiline
-            />
-            <Pressable style={styles.captionAddButton}>
-              <PlusIcon size={37} />
-            </Pressable>
-          </View>
+        {/* Fold It Button - rect x=21 y=909 w=350 h=50 rx=25 */}
+        <View style={styles.footer}>
+          <Pressable style={styles.foldButton} onPress={handleFoldIt}>
+            <Text style={styles.foldButtonText}>Fold it</Text>
+          </Pressable>
         </View>
-      </ScrollView>
-
-      {/* Fold It Button - rect x=21 y=909 w=350 h=50 rx=25 */}
-      <View style={styles.footer}>
-        <Pressable style={styles.foldButton} onPress={handleFoldIt}>
-          <Text style={styles.foldButtonText}>Fold it</Text>
-        </Pressable>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -355,6 +345,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -424,9 +417,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     marginTop: 20 * SCALE,
-    gap: 50 * SCALE, // Space between buttons
+    gap: 30 * SCALE, // Space between buttons
   },
   controlButton: {
+    width: 60 * SCALE,
+    height: 60 * SCALE,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -453,81 +448,40 @@ const styles = StyleSheet.create({
     width: 30 * SCALE,
     height: 30 * SCALE,
   },
-  // Mood section - matches rect x=17 y=589 w=358 h=136 rx=25
+  // Mood section - additional margin for positioning
   moodSection: {
-    width: 358 * SCALE,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 25 * SCALE,
-    paddingHorizontal: 13 * SCALE,
-    paddingTop: 16 * SCALE,
-    paddingBottom: 16 * SCALE,
     marginTop: 16 * SCALE,
-    alignSelf: 'center',
-  },
-  sectionLabel: {
-    fontSize: 18 * SCALE,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12 * SCALE,
-    paddingLeft: 3 * SCALE,
-  },
-  moodOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  // Wrapper for button + label
-  moodButtonWrapper: {
-    alignItems: 'center',
-  },
-  // Mood button - uses PNG image which includes background
-  moodButton: {
-    borderRadius: 10 * SCALE,
-    overflow: 'hidden',
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    // Shadow for Android
-    elevation: 4,
-  },
-  moodButtonSelected: {
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  moodImage: {
-    width: 60 * SCALE,
-    height: 60 * SCALE,
-  },
-  moodText: {
-    fontSize: 10 * SCALE,
-    fontWeight: '400',
-    color: COLORS.text,
   },
   // Caption section - matches rect x=17 y=741 w=358 h=136 rx=25
   captionSection: {
     width: 358 * SCALE,
-    height: 136 * SCALE,
     backgroundColor: COLORS.cardBackground,
     borderRadius: 25 * SCALE,
-    padding: 16 * SCALE,
+    paddingHorizontal: 16 * SCALE,
+    paddingTop: 14 * SCALE,
+    paddingBottom: 16 * SCALE,
     marginTop: 16 * SCALE,
     alignSelf: 'center',
   },
+  captionLabel: {
+    fontSize: 18 * SCALE,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4 * SCALE,
+  },
   captionInputContainer: {
-    flex: 1,
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   captionInput: {
     flex: 1,
     fontSize: 16 * SCALE,
     color: COLORS.text,
+    minHeight: 60 * SCALE,
+    textAlignVertical: 'top',
   },
   captionAddButton: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+    marginLeft: 8 * SCALE,
   },
   footer: {
     paddingHorizontal: 21 * SCALE,

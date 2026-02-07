@@ -1,20 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, StatusBar, Dimensions, Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { TimelineColors } from '@/constants/theme';
-import { BottomNavBar } from '@/components/timeline';
-import { 
-  ProfileAvatar, 
-  PrivateBadge, 
-  FoldScoreCard, 
-  FoldDataCards, 
-  FoldGrid, 
-  BadgesSection,
+import {
   ActivityLevel,
+  BadgesSection,
+  FoldDataCards,
+  FoldGrid,
+  FoldScoreCard,
+  PrivateBadge,
+  ProfileAvatar,
 } from '@/components/profile';
+import { BottomNavBar } from '@/components/timeline';
+import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
-import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -30,7 +30,7 @@ const MOCK_ACTIVITY_DATA: ActivityLevel[][] = [
 
 /**
  * Profile Screen - Exact layout from home:profile.svg
- * 
+ *
  * SVG Measurements:
  * - Screen: 393x852
  * - Avatar outer circle: cx=196 cy=158 r=62 (center at 196, 158)
@@ -38,7 +38,7 @@ const MOCK_ACTIVITY_DATA: ActivityLevel[][] = [
  * - Name "Vishnu's": at y=240 (text baseline)
  * - Badge: rect x=108 y=267 width=177 height=25 rx=12.5
  * - Bottom nav: rect x=107.5 y=745.5 width=176.98 height=54 rx=27
- * 
+ *
  * Components (from individual SVGs):
  * - FoldScore card: at y~305 (after badge at 267+25=292, plus margin)
  * - FoldData cards: at y~480
@@ -59,7 +59,7 @@ interface User {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
-  
+
   // Cast auth user to our User type
   const user = authUser as User | null;
 
@@ -75,7 +75,11 @@ export default function ProfileScreen() {
   };
 
   const handleCapturePress = () => {
-    console.log('Capture pressed');
+    router.push('/entry-text'); // Tap -> text entry
+  };
+
+  const handleCaptureLongPress = () => {
+    router.push('/entry-audio'); // Long press -> voice recording
   };
 
   const handleProfilePress = () => {
@@ -93,71 +97,71 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
-      
+
       {/* Top bar: folder (left), "Profile" title (center), settings (right) */}
       <View style={styles.topBar}>
         <Pressable onPress={handleFoldersPress} style={styles.topBarButton}>
           <FolderIcon size={48 * SCALE} />
         </Pressable>
-        
+
         <Text style={styles.topBarTitle}>Profile</Text>
-        
+
         <Pressable onPress={handleSettingsPress} style={styles.topBarButton}>
           <SettingsIcon size={25 * SCALE} />
         </Pressable>
       </View>
-      
+
       {/* Scrollable content */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar - centered, outer ring + inner image */}
         <View style={styles.avatarSection}>
-          <ProfileAvatar 
+          <ProfileAvatar
             imageUri={user?.image || undefined}
             imageSource={!user?.image ? require('@/assets/images/pfp.png') : undefined}
             size={124 * SCALE}
           />
         </View>
-        
+
         {/* User name - "Vishnu's" */}
         <Text style={styles.userName}>{getDisplayName()}</Text>
-        
+
         {/* Private member badge - "PRIVATE MEMORY VAULT" */}
         <View style={styles.badgeSection}>
           <PrivateBadge text="PRIVATE MEMORY VAULT" />
         </View>
-        
+
         {/* Fold Score Card */}
         <View style={styles.cardSection}>
-          <FoldScoreCard 
+          <FoldScoreCard
             score={840}
             percentile={10}
             progress={0.75}
           />
         </View>
-        
+
         {/* Fold Data Cards (Streak + Audio) */}
         <View style={styles.cardSection}>
-          <FoldDataCards 
+          <FoldDataCards
             streakDays={8}
             isStreakActive={true}
             audioMinutes={43}
           />
         </View>
-        
+
         {/* Fold Grid (Activity heatmap) */}
         <View style={styles.cardSection}>
           <FoldGrid activityData={MOCK_ACTIVITY_DATA} />
         </View>
-        
+
         {/* Badges Section */}
         <View style={styles.cardSection}>
           <BadgesSection />
         </View>
-        
+
         {/* Privacy promise */}
         <View style={styles.privacySection}>
           <View style={styles.privacyContent}>
@@ -165,7 +169,7 @@ export default function ProfileScreen() {
             <Text style={styles.privacyText}>We promise your memories are safe with us</Text>
           </View>
         </View>
-        
+
         {/* Bottom padding */}
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -175,6 +179,7 @@ export default function ProfileScreen() {
         activeTab="profile"
         onGridPress={handleGridPress}
         onCapturePress={handleCapturePress}
+        onCaptureLongPress={handleCaptureLongPress}
         onProfilePress={handleProfilePress}
       />
     </SafeAreaView>
@@ -204,13 +209,13 @@ function FolderIcon({ size = 48 }: { size?: number }) {
 function SettingsIcon({ size = 25 }: { size?: number }) {
   const circleSize = size * 1.9; // Background circle is larger than icon
   return (
-    <View style={{ 
-      width: circleSize, 
-      height: circleSize, 
-      borderRadius: circleSize / 2, 
-      backgroundColor: 'rgba(129, 1, 0, 0.2)', 
-      justifyContent: 'center', 
-      alignItems: 'center' 
+    <View style={{
+      width: circleSize,
+      height: circleSize,
+      borderRadius: circleSize / 2,
+      backgroundColor: 'rgba(129, 1, 0, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center'
     }}>
       <Svg width={size} height={size} viewBox="0 0 25 25" fill="none">
         <Path

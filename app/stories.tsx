@@ -1,9 +1,8 @@
 import { TimelineColors } from '@/constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Dimensions,
-  FlatList,
   Pressable,
   ScrollView,
   StatusBar,
@@ -287,8 +286,7 @@ export default function StoriesScreen() {
   };
 
   const handleWriteStory = () => {
-    // TODO: Navigate to write story screen
-    console.log('Write new story');
+    router.push('/write-story' as Href);
   };
 
   const handleStoryPress = (story: Story) => {

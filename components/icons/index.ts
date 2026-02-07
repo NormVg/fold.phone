@@ -17,4 +17,5 @@ export { SettingsIcon } from './SettingsIcon';
 export { ShieldIcon } from './ShieldIcon';
 export { SparkleIcon } from './SparkleIcon';
 export { UserIcon } from './UserIcon';
+export { VSadMoodIcon, SadMoodIcon, NormalMoodIcon, HappyMoodIcon, VHappyMoodIcon } from './MoodIcons';
 

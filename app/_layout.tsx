@@ -1,11 +1,12 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 
@@ -31,10 +32,10 @@ function useProtectedRoute() {
     if (isLoading || hasSeenOnboarding === null) return;
 
     const currentRoute = segments[0];
-    
+
     // Wait for router to be ready (segments populated) before making navigation decisions
     if (currentRoute === undefined) return;
-    
+
     const isOnboarding = currentRoute === 'onboarding';
     const isAuthScreen = currentRoute === 'auth' || currentRoute === 'signup';
 
@@ -68,7 +69,7 @@ function useProtectedRoute() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { isLoading, hasSeenOnboarding } = useAuth();
-  
+
   const [fontsLoaded] = useFonts({
     'SignPainter': require('../assets/fonts/SignPainterHouseScript.ttf'),
     'JockeyOne': require('../assets/fonts/JockeyOne-Regular.ttf'),
@@ -97,27 +98,31 @@ function RootLayoutNav() {
   }
 
   return (
-    <KeyboardProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-          <Stack.Screen name="change-password" options={{ headerShown: false }} />
-          <Stack.Screen name="notifications" options={{ headerShown: false }} />
-          <Stack.Screen name="appearance" options={{ headerShown: false }} />
-          <Stack.Screen name="help" options={{ headerShown: false }} />
-          <Stack.Screen name="about" options={{ headerShown: false }} />
-          <Stack.Screen name="story/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="stories" options={{ headerShown: false }} />
-          <Stack.Screen name="new-memory" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar hidden={true} />
-      </ThemeProvider>
-    </KeyboardProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="signup" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="edit-profile" />
+            <Stack.Screen name="change-password" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="appearance" />
+            <Stack.Screen name="help" />
+            <Stack.Screen name="about" />
+            <Stack.Screen name="story/[id]" />
+            <Stack.Screen name="stories" />
+            <Stack.Screen name="write-story" />
+            <Stack.Screen name="entry-audio" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="entry-text" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          </Stack>
+          <StatusBar hidden={true} />
+        </ThemeProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
   );
 }
 

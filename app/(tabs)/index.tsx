@@ -1,22 +1,28 @@
-import React, { useRef, useState, useCallback, useMemo } from 'react';
-import { Dimensions, StyleSheet, View, StatusBar, ScrollView, Text, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import PagerView from 'react-native-pager-view';
-import { useRouter } from 'expo-router';
-import { TimelineColors } from '@/constants/theme';
-import { BottomNavBar, TimelineHeader, VoiceCard, PhotoCard, TextCard, VideoCard, StoryCard } from '@/components/timeline';
-import { HubCalendar, HubPanelGrid, ActivityLevel } from '@/components/hub';
-import { 
-  ProfileAvatar, 
-  PrivateBadge, 
-  FoldScoreCard, 
-  FoldDataCards, 
-  FoldGrid, 
+import { ActivityLevel, HubCalendar, HubPanelGrid } from '@/components/hub';
+import {
   BadgesSection,
+  FoldDataCards,
+  FoldGrid,
+  FoldScoreCard,
+  PrivateBadge,
   ActivityLevel as ProfileActivityLevel,
+  ProfileAvatar,
 } from '@/components/profile';
+import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, VideoCard, VoiceCard } from '@/components/timeline';
+import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -47,10 +53,13 @@ interface User {
 
 export default function MainScreen() {
   const router = useRouter();
-  const pagerRef = useRef<PagerView>(null);
   const [currentPage, setCurrentPage] = useState(PAGE_TIMELINE); // Start on Timeline (center)
   const { user: authUser } = useAuth();
   const user = authUser as User | null;
+
+  // Horizontal pager state (custom gesture pager)
+  const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
+  const panStartX = useSharedValue(translateX.value);
 
   // Date info for headers
   const now = new Date();
@@ -74,14 +83,11 @@ export default function MainScreen() {
     return data;
   }, []);
 
-  // Navigation handlers
   const navigateToPage = useCallback((page: number) => {
-    pagerRef.current?.setPage(page);
-  }, []);
-
-  const handlePageSelected = useCallback((e: { nativeEvent: { position: number } }) => {
-    setCurrentPage(e.nativeEvent.position);
-  }, []);
+    const clamped = Math.max(PAGE_HUB, Math.min(PAGE_PROFILE, page));
+    translateX.value = withTiming(-SCREEN_WIDTH * clamped, { duration: 240 });
+    setCurrentPage(clamped);
+  }, [translateX]);
 
   // Get active tab based on current page
   const getActiveTab = () => {
@@ -94,8 +100,8 @@ export default function MainScreen() {
 
   // Bottom nav handlers
   const handleGridPress = () => navigateToPage(PAGE_HUB);
-  const handleCapturePress = () => console.log('Capture pressed');
-  const handleCaptureLongPress = () => router.push('/new-memory');
+  const handleCapturePress = () => router.push('/entry-text'); // Tap -> text entry
+  const handleCaptureLongPress = () => router.push('/entry-audio'); // Long press -> voice recording
   const handleProfilePress = () => navigateToPage(PAGE_PROFILE);
 
   // Hub handlers
@@ -134,188 +140,226 @@ export default function MainScreen() {
   const handleMoodPress = () => console.log('Mood pressed');
   const handleImagePress = () => console.log('Image pressed');
 
+  const pagerAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
+  const pagerGesture = useMemo(() => {
+    const minSwipeDistance = Math.max(70, SCREEN_WIDTH * 0.18);
+    const minFlingVelocity = 800;
+
+    return Gesture.Pan()
+      .activeOffsetX([-25, 25])
+      .failOffsetY([-12, 12])
+      .onBegin(() => {
+        panStartX.value = translateX.value;
+      })
+      .onUpdate((e) => {
+        const raw = panStartX.value + e.translationX;
+        const min = -SCREEN_WIDTH * PAGE_PROFILE;
+        const max = -SCREEN_WIDTH * PAGE_HUB;
+        translateX.value = Math.max(min, Math.min(max, raw));
+      })
+      .onEnd((e) => {
+        const pageFloat = -translateX.value / SCREEN_WIDTH;
+        let nextPage = Math.round(pageFloat);
+
+        if (Math.abs(e.translationX) < minSwipeDistance && Math.abs(e.velocityX) < minFlingVelocity) {
+          nextPage = currentPage;
+        } else {
+          if (e.translationX < 0 || e.velocityX < -minFlingVelocity) nextPage = Math.ceil(pageFloat);
+          if (e.translationX > 0 || e.velocityX > minFlingVelocity) nextPage = Math.floor(pageFloat);
+        }
+
+        nextPage = Math.max(PAGE_HUB, Math.min(PAGE_PROFILE, nextPage));
+        translateX.value = withTiming(-SCREEN_WIDTH * nextPage, { duration: 240 });
+        runOnJS(setCurrentPage)(nextPage);
+      });
+  }, [currentPage, panStartX, translateX]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
 
-      <PagerView
-        ref={pagerRef}
-        style={styles.pager}
-        initialPage={PAGE_TIMELINE}
-        onPageSelected={handlePageSelected}
-      >
-        {/* Page 0: Hub */}
-        <View key="hub" style={styles.page}>
-          <TimelineHeader
-            dayOfWeek={dayOfWeek}
-            date={date}
-            onProfilePress={handleProfilePress}
-          />
-          <ScrollView
-            style={styles.pageContent}
-            contentContainerStyle={styles.hubScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <HubCalendar
-              year={calendarYear}
-              month={calendarMonth}
-              activityData={activityData}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-              onDayPress={(day) => console.log('Day pressed:', day)}
-            />
-            <HubPanelGrid
-              onStoriesPress={() => router.push('/stories')}
-              onEmotionsPress={() => console.log('Emotions pressed')}
-              onSharePress={() => console.log('Share pressed')}
-              onMediaPress={() => console.log('Media pressed')}
-            />
-          </ScrollView>
-        </View>
-
-        {/* Page 1: Timeline (default) */}
-        <View key="timeline" style={styles.page}>
-          <TimelineHeader
-            dayOfWeek={dayOfWeek}
-            date={date}
-            onProfilePress={handleProfilePress}
-          />
-          <View style={styles.timelineWrapper}>
-            <View style={styles.timelineLine} />
-            <ScrollView
-              style={styles.pageContent}
-              contentContainerStyle={styles.timelineScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.cardWrapper}>
-                <TextCard
-                  content="Just had the most amazing coffee this morning. Sometimes it's the little things that make a day great."
-                  time="04:20 PM"
-                  mood="HAPPY"
-                  onSharePress={handleSharePress}
-                  onLocationPress={handleLocationPress}
-                  onMoodPress={handleMoodPress}
+      <GestureDetector gesture={pagerGesture}>
+        <View style={styles.pager}>
+          <Animated.View style={[styles.pagerTrack, pagerAnimatedStyle]}>
+            {/* Page 0: Hub */}
+            <View key="hub" style={styles.page}>
+              <TimelineHeader
+                dayOfWeek={dayOfWeek}
+                date={date}
+                onProfilePress={handleProfilePress}
+              />
+              <ScrollView
+                style={styles.pageContent}
+                contentContainerStyle={styles.hubScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <HubCalendar
+                  year={calendarYear}
+                  month={calendarMonth}
+                  activityData={activityData}
+                  onPrevMonth={handlePrevMonth}
+                  onNextMonth={handleNextMonth}
+                  onDayPress={(day) => console.log('Day pressed:', day)}
                 />
-              </View>
-
-              <View style={styles.cardWrapper}>
-                <VoiceCard
-                  title="Rant about math"
-                  time="03:34 PM"
-                  duration="03:34"
-                  mood="SAD"
-                  onPlayPress={handlePlayPress}
-                  onSharePress={handleSharePress}
-                  onLocationPress={handleLocationPress}
-                  onMoodPress={handleMoodPress}
+                <HubPanelGrid
+                  onStoriesPress={() => router.push('/stories')}
+                  onEmotionsPress={() => console.log('Emotions pressed')}
+                  onSharePress={() => console.log('Share pressed')}
+                  onMediaPress={() => console.log('Media pressed')}
                 />
-              </View>
+              </ScrollView>
+            </View>
 
-              <View style={styles.cardWrapper}>
-                <PhotoCard
-                  title="Hello"
-                  time="02:15 PM"
-                  imageUri="https://picsum.photos/400/300"
-                  mood="SAD"
-                  onImagePress={handleImagePress}
-                  onSharePress={handleSharePress}
-                  onLocationPress={handleLocationPress}
-                  onMoodPress={handleMoodPress}
-                />
-              </View>
+            {/* Page 1: Timeline (default) */}
+            <View key="timeline" style={styles.page}>
+              <TimelineHeader
+                dayOfWeek={dayOfWeek}
+                date={date}
+                onProfilePress={handleProfilePress}
+              />
+              <View style={styles.timelineWrapper}>
+                <View style={styles.timelineLine} />
+                <ScrollView
+                  style={styles.pageContent}
+                  contentContainerStyle={styles.timelineScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.cardWrapper}>
+                    <TextCard
+                      content="Just had the most amazing coffee this morning. Sometimes it's the little things that make a day great."
+                      time="04:20 PM"
+                      mood="HAPPY"
+                      onSharePress={handleSharePress}
+                      onLocationPress={handleLocationPress}
+                      onMoodPress={handleMoodPress}
+                    />
+                  </View>
 
-              <View style={styles.cardWrapper}>
-                <VideoCard
-                  title="Sunset timelapse"
-                  time="01:45 PM"
-                  duration="00:32"
-                  thumbnailUri="https://picsum.photos/400/250"
-                  mood="HAPPY"
-                  onPlayPress={handlePlayPress}
-                  onSharePress={handleSharePress}
-                  onLocationPress={handleLocationPress}
-                  onMoodPress={handleMoodPress}
-                />
-              </View>
+                  <View style={styles.cardWrapper}>
+                    <VoiceCard
+                      title="Rant about math"
+                      time="03:34 PM"
+                      duration="03:34"
+                      mood="SAD"
+                      onPlayPress={handlePlayPress}
+                      onSharePress={handleSharePress}
+                      onLocationPress={handleLocationPress}
+                      onMoodPress={handleMoodPress}
+                    />
+                  </View>
 
-              <View style={styles.cardWrapper}>
-                <StoryCard
-                  id="story-1"
-                  title="A Walk Through Memory Lane"
-                  content="Today I found myself walking through the old neighborhood where I grew up. The streets seemed smaller somehow, the trees much taller than I remembered. Every corner held a memory - the spot where I learned to ride a bike, the fence I used to climb, the window of my childhood bedroom where I would sit and dream about the future.
+                  <View style={styles.cardWrapper}>
+                    <PhotoCard
+                      title="Hello"
+                      time="02:15 PM"
+                      imageUri="https://picsum.photos/400/300"
+                      mood="SAD"
+                      onImagePress={handleImagePress}
+                      onSharePress={handleSharePress}
+                      onLocationPress={handleLocationPress}
+                      onMoodPress={handleMoodPress}
+                    />
+                  </View>
+
+                  <View style={styles.cardWrapper}>
+                    <VideoCard
+                      title="Sunset timelapse"
+                      time="01:45 PM"
+                      duration="00:32"
+                      thumbnailUri="https://picsum.photos/400/250"
+                      mood="HAPPY"
+                      onPlayPress={handlePlayPress}
+                      onSharePress={handleSharePress}
+                      onLocationPress={handleLocationPress}
+                      onMoodPress={handleMoodPress}
+                    />
+                  </View>
+
+                  <View style={styles.cardWrapper}>
+                    <StoryCard
+                      id="story-1"
+                      title="A Walk Through Memory Lane"
+                      content="Today I found myself walking through the old neighborhood where I grew up. The streets seemed smaller somehow, the trees much taller than I remembered. Every corner held a memory - the spot where I learned to ride a bike, the fence I used to climb, the window of my childhood bedroom where I would sit and dream about the future.
 
 It's strange how places can hold so much of who we were. The old bakery is still there, though under new ownership now. The smell of fresh bread still wafts through the morning air, just as it did twenty years ago. I bought a croissant, and for a moment, I was ten years old again, clutching coins in my small hands, feeling like the richest kid in the world.
 
 Some things change, and some things stay the same. But I realized today that the most important things - the feelings, the love, the sense of belonging - those live inside us forever. We carry our homes within our hearts, no matter how far we travel."
-                  time="12:30 PM"
-                  mood="HAPPY"
-                  onSharePress={handleSharePress}
-                  onLocationPress={handleLocationPress}
-                  onMoodPress={handleMoodPress}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-
-        {/* Page 2: Profile */}
-        <View key="profile" style={styles.page}>
-          <View style={styles.profileTopBar}>
-            <Pressable onPress={handleFoldersPress} style={styles.topBarButton}>
-              <FolderIcon size={48 * SCALE} />
-            </Pressable>
-            <Text style={styles.topBarTitle}>Profile</Text>
-            <Pressable onPress={handleSettingsPress} style={styles.topBarButton}>
-              <SettingsIcon size={25 * SCALE} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.pageContent}
-            contentContainerStyle={styles.profileScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.avatarSection}>
-              <ProfileAvatar
-                imageUri={user?.image || undefined}
-                imageSource={!user?.image ? require('@/assets/images/pfp.png') : undefined}
-                size={124 * SCALE}
-              />
-            </View>
-
-            <Text style={styles.userName}>{getDisplayName()}</Text>
-
-            <View style={styles.badgeSection}>
-              <PrivateBadge text="PRIVATE MEMORY VAULT" />
-            </View>
-
-            <View style={styles.cardSection}>
-              <FoldScoreCard score={840} percentile={10} progress={0.75} />
-            </View>
-
-            <View style={styles.cardSection}>
-              <FoldDataCards streakDays={8} isStreakActive={true} audioMinutes={43} />
-            </View>
-
-            <View style={styles.cardSection}>
-              <FoldGrid activityData={MOCK_ACTIVITY_DATA} />
-            </View>
-
-            <View style={styles.cardSection}>
-              <BadgesSection />
-            </View>
-
-            <View style={styles.privacySection}>
-              <View style={styles.privacyContent}>
-                <ShieldCheckIcon size={14 * SCALE} />
-                <Text style={styles.privacyText}>We promise your memories are safe with us</Text>
+                      time="12:30 PM"
+                      mood="HAPPY"
+                      onSharePress={handleSharePress}
+                      onLocationPress={handleLocationPress}
+                      onMoodPress={handleMoodPress}
+                    />
+                  </View>
+                </ScrollView>
               </View>
             </View>
 
-            <View style={styles.bottomPadding} />
-          </ScrollView>
+            {/* Page 2: Profile */}
+            <View key="profile" style={styles.page}>
+              <View style={styles.profileTopBar}>
+                <Pressable onPress={handleFoldersPress} style={styles.topBarButton}>
+                  <FolderIcon size={48 * SCALE} />
+                </Pressable>
+                <Text style={styles.topBarTitle}>Profile</Text>
+                <Pressable onPress={handleSettingsPress} style={styles.topBarButton}>
+                  <SettingsIcon size={25 * SCALE} />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={styles.pageContent}
+                contentContainerStyle={styles.profileScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.avatarSection}>
+                  <ProfileAvatar
+                    imageUri={user?.image || undefined}
+                    imageSource={!user?.image ? require('@/assets/images/pfp.png') : undefined}
+                    size={124 * SCALE}
+                  />
+                </View>
+
+                <Text style={styles.userName}>{getDisplayName()}</Text>
+
+                <View style={styles.badgeSection}>
+                  <PrivateBadge text="PRIVATE MEMORY VAULT" />
+                </View>
+
+                <View style={styles.cardSection}>
+                  <FoldScoreCard score={840} percentile={10} progress={0.75} />
+                </View>
+
+                <View style={styles.cardSection}>
+                  <FoldDataCards streakDays={8} isStreakActive={true} audioMinutes={43} />
+                </View>
+
+                <View style={styles.cardSection}>
+                  <FoldGrid activityData={MOCK_ACTIVITY_DATA} />
+                </View>
+
+                <View style={styles.cardSection}>
+                  <BadgesSection />
+                </View>
+
+                <View style={styles.privacySection}>
+                  <View style={styles.privacyContent}>
+                    <ShieldCheckIcon size={14 * SCALE} />
+                    <Text style={styles.privacyText}>We promise your memories are safe with us</Text>
+                  </View>
+                </View>
+
+                <View style={styles.bottomPadding} />
+              </ScrollView>
+            </View>
+          </Animated.View>
         </View>
-      </PagerView>
+      </GestureDetector>
 
       {/* Bottom navigation bar - synced with pager */}
       <BottomNavBar
@@ -389,8 +433,14 @@ const styles = StyleSheet.create({
   pager: {
     flex: 1,
   },
+  pagerTrack: {
+    flex: 1,
+    flexDirection: 'row',
+    width: SCREEN_WIDTH * 3,
+  },
   page: {
     flex: 1,
+    width: SCREEN_WIDTH,
   },
   pageContent: {
     flex: 1,

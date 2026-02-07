@@ -78,7 +78,11 @@ export default function HubScreen() {
   };
 
   const handleCapturePress = () => {
-    console.log('Capture pressed');
+    router.push('/entry-text'); // Tap -> text entry
+  };
+
+  const handleCaptureLongPress = () => {
+    router.push('/entry-audio'); // Long press -> voice recording
   };
 
   const handleProfilePress = () => {
@@ -125,6 +129,7 @@ export default function HubScreen() {
         activeTab="hub"
         onGridPress={handleGridPress}
         onCapturePress={handleCapturePress}
+        onCaptureLongPress={handleCaptureLongPress}
         onProfilePress={handleProfilePress}
       />
     </SafeAreaView>
