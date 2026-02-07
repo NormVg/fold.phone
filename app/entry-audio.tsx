@@ -1,6 +1,7 @@
 import { MoodPicker, type MoodType } from '@/components/mood';
 import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
+import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -207,6 +208,8 @@ export default function NewMemoryScreen() {
   const [caption, setCaption] = useState('');
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [location, setLocation] = useState<string | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -419,17 +422,85 @@ export default function NewMemoryScreen() {
     }
   };
 
-  const handleFoldIt = () => {
-    // Add entry to timeline
+  const handleAddLocation = async () => {
+    if (isLoadingLocation) return;
+
+    setIsLoadingLocation(true);
+    try {
+      // Request permissions
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant location permission to add your location.'
+        );
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      // Get current position
+      const position = await ExpoLocation.getCurrentPositionAsync({
+        accuracy: ExpoLocation.Accuracy.Balanced,
+      });
+
+      // Reverse geocode to get address
+      const addresses = await ExpoLocation.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      if (addresses.length > 0) {
+        const addr = addresses[0];
+        // Format location name (city, region or full address)
+        const locationName = addr.city || addr.subregion || addr.region ||
+          `${addr.street || ''} ${addr.name || ''}`.trim() ||
+          `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+        setLocation(locationName);
+        console.log('Location set:', locationName);
+      }
+    } catch (err) {
+      console.error('Failed to get location:', err);
+      Alert.alert('Error', 'Could not get your location. Please try again.');
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  const handleFoldIt = async () => {
+    // Require mood selection
+    if (!selectedMood) {
+      Alert.alert('Choose a mood', 'Please select how you\'re feeling before folding.');
+      return;
+    }
+
+    // If still recording, stop and save first
+    let finalUri = recordingUri;
+
+    if (recordingRef.current && (isRecording || isPaused)) {
+      try {
+        stopAllTimers();
+        await recordingRef.current.stopAndUnloadAsync();
+        finalUri = recordingRef.current.getURI();
+        setRecordingUri(finalUri);
+        setIsRecording(false);
+        setIsPaused(false);
+        console.log('Recording auto-saved to:', finalUri);
+      } catch (err) {
+        console.error('Failed to stop recording:', err);
+      }
+    }
+
+    // Add entry to timeline with the final URI
     addEntry({
       type: 'audio',
       mood: selectedMood,
       caption: caption || 'Voice memo',
-      audioUri: recordingUri || undefined,
+      audioUri: finalUri || undefined,
       audioDuration: recordingTime,
+      location: location || undefined,
     });
 
-    console.log('Folding memory:', { recordingUri, recordingTime, selectedMood, caption });
+    console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
     router.back();
   };
 
@@ -500,12 +571,28 @@ export default function NewMemoryScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.captionAddButton,
-                  { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }
+                  {
+                    opacity: pressed || isLoadingLocation ? 0.7 : 1,
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                  }
                 ]}
+                onPress={handleAddLocation}
+                disabled={isLoadingLocation}
               >
                 <LocationIcon size={37} />
               </Pressable>
             </View>
+
+            {/* Location tag */}
+            {location && (
+              <View style={styles.locationTag}>
+                <LocationIcon size={14} />
+                <Text style={styles.locationTagText}>{location}</Text>
+                <Pressable onPress={() => setLocation(null)} style={styles.locationTagClose}>
+                  <Text style={styles.locationTagCloseText}>×</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </ScrollView>
 
@@ -680,5 +767,31 @@ const styles = StyleSheet.create({
     fontSize: 24 * SCALE,
     fontFamily: 'SignPainter',
     color: COLORS.white,
+  },
+  locationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12 * SCALE,
+    paddingVertical: 6 * SCALE,
+    borderRadius: 16 * SCALE,
+    marginTop: 10 * SCALE,
+    alignSelf: 'flex-start',
+    gap: 6 * SCALE,
+  },
+  locationTagText: {
+    color: COLORS.white,
+    fontSize: 12 * SCALE,
+    fontWeight: '500',
+  },
+  locationTagClose: {
+    marginLeft: 4 * SCALE,
+    padding: 2 * SCALE,
+  },
+  locationTagCloseText: {
+    color: COLORS.white,
+    fontSize: 16 * SCALE,
+    fontWeight: '600',
+    lineHeight: 16 * SCALE,
   },
 });

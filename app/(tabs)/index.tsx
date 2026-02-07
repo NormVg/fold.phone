@@ -139,6 +139,7 @@ export default function MainScreen() {
   // Timeline handlers
   const soundRef = useRef<Audio.Sound | null>(null);
   const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
+  const [playbackProgress, setPlaybackProgress] = useState<number>(0); // 0 to 1
 
   const playAudio = async (uri: string | undefined, entryId: string) => {
     if (!uri) {
@@ -167,27 +168,37 @@ export default function MainScreen() {
         await soundRef.current.unloadAsync();
         soundRef.current = null;
         setPlayingEntryId(null);
+        setPlaybackProgress(0);
       }
 
       // Create and play new sound
       const { sound } = await Audio.Sound.createAsync(
         { uri },
-        { shouldPlay: true }
+        { shouldPlay: true, progressUpdateIntervalMillis: 100 }
       );
       soundRef.current = sound;
       setPlayingEntryId(entryId);
+      setPlaybackProgress(0);
 
-      // Clean up when done playing
+      // Track playback progress
       sound.setOnPlaybackStatusUpdate((status) => {
-        if ('didJustFinish' in status && status.didJustFinish) {
-          sound.unloadAsync();
-          soundRef.current = null;
-          setPlayingEntryId(null);
+        if ('isLoaded' in status && status.isLoaded) {
+          if (status.durationMillis && status.positionMillis) {
+            const progress = status.positionMillis / status.durationMillis;
+            setPlaybackProgress(progress);
+          }
+          if (status.didJustFinish) {
+            sound.unloadAsync();
+            soundRef.current = null;
+            setPlayingEntryId(null);
+            setPlaybackProgress(0);
+          }
         }
       });
     } catch (error) {
       console.error('Error playing audio:', error);
       setPlayingEntryId(null);
+      setPlaybackProgress(0);
     }
   };
 
@@ -293,15 +304,8 @@ export default function MainScreen() {
                       minute: '2-digit',
                       hour12: true,
                     });
-                    // Map MoodPicker values to VoiceCard mood strings
-                    const moodMap: Record<string, string> = {
-                      'V. Happy': 'HAPPY',
-                      'Happy': 'HAPPY',
-                      'Normal': 'NEUTRAL',
-                      'Sad': 'SAD',
-                      'V. Sad': 'SAD',
-                    };
-                    const mood = entry.mood ? moodMap[entry.mood] || 'NEUTRAL' : 'NEUTRAL';
+                    // Pass mood directly - VoiceCard supports all 5 mood types
+                    const mood = entry.mood || 'Normal';
 
                     if (entry.type === 'audio') {
                       const formatDuration = (seconds: number) => {
@@ -316,7 +320,9 @@ export default function MainScreen() {
                             time={time}
                             duration={formatDuration(entry.audioDuration || 0)}
                             mood={mood}
+                            location={entry.location}
                             isPlaying={playingEntryId === entry.id}
+                            progress={playingEntryId === entry.id ? playbackProgress : 0}
                             onPlayPress={() => playAudio(entry.audioUri, entry.id)}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
