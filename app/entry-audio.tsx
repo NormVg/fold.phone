@@ -1,7 +1,9 @@
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   KeyboardAvoidingView,
@@ -137,19 +139,22 @@ function LocationIcon({ size = 37 }: { size?: number }) {
   );
 }
 
-// Audio waveform bars - smooth animated version
-function AudioWaveform({ isRecording }: { isRecording: boolean }) {
+// Audio waveform bars - responds to real microphone metering
+function AudioWaveform({ isRecording, meterLevel }: { isRecording: boolean; meterLevel: number }) {
   const NUM_BARS = 10;
   const animatedHeights = useRef(
-    Array.from({ length: NUM_BARS }, () => new Animated.Value(40))
+    Array.from({ length: NUM_BARS }, () => new Animated.Value(20))
   ).current;
+  const lastMeterRef = useRef(meterLevel);
 
   useEffect(() => {
+    lastMeterRef.current = meterLevel;
+
     if (!isRecording) {
       // Reset to static heights when not recording
       animatedHeights.forEach((anim, i) => {
         Animated.timing(anim, {
-          toValue: 40 + (i % 3) * 10,
+          toValue: 20 + (i % 3) * 5,
           duration: 300,
           useNativeDriver: false,
         }).start();
@@ -157,26 +162,23 @@ function AudioWaveform({ isRecording }: { isRecording: boolean }) {
       return;
     }
 
-    // Animate each bar with staggered timing for smooth wave effect
-    const animateBars = () => {
-      const animations = animatedHeights.map((anim, index) => {
-        const targetHeight = Math.random() * 50 + 30;
-        return Animated.timing(anim, {
-          toValue: targetHeight,
-          duration: 150 + Math.random() * 100, // Vary duration for organic feel
-          useNativeDriver: false,
-        });
-      });
+    // Convert decibel level (-160 to 0 dB) to visual height (20-80)
+    // Typical voice is around -30 to -10 dB
+    const normalizedLevel = Math.max(0, Math.min(1, (meterLevel + 60) / 60));
+    const baseHeight = 20 + normalizedLevel * 60;
 
-      Animated.parallel(animations).start(() => {
-        if (isRecording) {
-          animateBars();
-        }
-      });
-    };
+    // Animate each bar with variation for wave effect
+    animatedHeights.forEach((anim, index) => {
+      const variation = Math.sin(Date.now() / 100 + index) * 10;
+      const barHeight = Math.max(15, Math.min(80, baseHeight + variation * normalizedLevel));
 
-    animateBars();
-  }, [isRecording]);
+      Animated.timing(anim, {
+        toValue: barHeight,
+        duration: 80,
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [isRecording, meterLevel]);
 
   return (
     <View style={styles.waveformContainer}>
@@ -195,24 +197,169 @@ function AudioWaveform({ isRecording }: { isRecording: boolean }) {
 
 export default function NewMemoryScreen() {
   const router = useRouter();
-  const [isRecording, setIsRecording] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [meterLevel, setMeterLevel] = useState(-60);
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [caption, setCaption] = useState('');
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+
+  const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const meteringRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Start timer on mount
+  // Request permissions and start recording on mount
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setRecordingTime(prev => prev + 1);
-    }, 1000);
+    const setupRecording = async () => {
+      try {
+        // Request permissions
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Required',
+            'Please grant microphone permission to record audio.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+          return;
+        }
+        setPermissionGranted(true);
 
+        // Set audio mode for recording
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        // Start recording automatically
+        await startRecording();
+      } catch (err) {
+        console.error('Failed to setup recording:', err);
+        Alert.alert('Error', 'Failed to start recording. Please try again.');
+      }
+    };
+
+    setupRecording();
+
+    // Cleanup on unmount
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      stopAllTimers();
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => { });
       }
     };
   }, []);
+
+  const stopAllTimers = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (meteringRef.current) {
+      clearInterval(meteringRef.current);
+      meteringRef.current = null;
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync({
+        isMeteringEnabled: true,
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      });
+
+      await recording.startAsync();
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setIsPaused(false);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      // Start metering - poll every 100ms
+      meteringRef.current = setInterval(async () => {
+        if (recordingRef.current) {
+          try {
+            const status = await recordingRef.current.getStatusAsync();
+            if (status.isRecording && status.metering !== undefined) {
+              setMeterLevel(status.metering);
+            }
+          } catch (err) {
+            // Ignore errors during polling
+          }
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error('Failed to start recording:', err);
+    }
+  };
+
+  const pauseRecording = async () => {
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.pauseAsync();
+        setIsPaused(true);
+        setIsRecording(false);
+        stopAllTimers();
+      } catch (err) {
+        console.error('Failed to pause recording:', err);
+      }
+    }
+  };
+
+  const resumeRecording = async () => {
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.startAsync();
+        setIsPaused(false);
+        setIsRecording(true);
+
+        // Restart timers
+        timerRef.current = setInterval(() => {
+          setRecordingTime(prev => prev + 1);
+        }, 1000);
+
+        meteringRef.current = setInterval(async () => {
+          if (recordingRef.current) {
+            try {
+              const status = await recordingRef.current.getStatusAsync();
+              if (status.isRecording && status.metering !== undefined) {
+                setMeterLevel(status.metering);
+              }
+            } catch (err) { }
+          }
+        }, 100);
+      } catch (err) {
+        console.error('Failed to resume recording:', err);
+      }
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -220,37 +367,58 @@ export default function NewMemoryScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    stopAllTimers();
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+      } catch (err) { }
+    }
     router.back();
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    stopAllTimers();
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+      } catch (err) { }
+    }
+    recordingRef.current = null;
     setRecordingTime(0);
-    setIsRecording(true);
+    setMeterLevel(-60);
+    setRecordingUri(null);
+    await startRecording();
   };
 
-  const handleToggleRecording = () => {
-    setIsRecording(!isRecording);
-    if (isRecording && timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      await pauseRecording();
+    } else if (isPaused) {
+      await resumeRecording();
     } else {
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
+      await startRecording();
     }
   };
 
-  const handleConfirm = () => {
-    setIsRecording(false);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const handleConfirm = async () => {
+    stopAllTimers();
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+        const uri = recordingRef.current.getURI();
+        setRecordingUri(uri);
+        setIsRecording(false);
+        setIsPaused(false);
+        console.log('Recording saved to:', uri);
+      } catch (err) {
+        console.error('Failed to stop recording:', err);
+      }
     }
   };
 
   const handleFoldIt = () => {
-    console.log('Folding memory:', { recordingTime, selectedMood, caption });
+    console.log('Folding memory:', { recordingUri, recordingTime, selectedMood, caption });
     router.back();
   };
 
@@ -283,7 +451,7 @@ export default function NewMemoryScreen() {
             <Text style={styles.timer}>{formatTime(recordingTime)}</Text>
 
             {/* Waveform */}
-            <AudioWaveform isRecording={isRecording} />
+            <AudioWaveform isRecording={isRecording} meterLevel={meterLevel} />
 
             {/* Controls - Reset, Record, Confirm */}
             <View style={styles.controls}>
