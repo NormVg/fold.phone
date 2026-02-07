@@ -19,6 +19,7 @@ export interface StoryCardProps {
   location?: string; // Location name
   pageCount?: number; // Number of pages in the story
   readTime?: string; // e.g., "3 min read"
+  storyMedia?: { uri: string; type: 'image' | 'video'; duration?: number }[];
   onSharePress?: () => void;
   onLocationPress?: () => void;
   onMoodPress?: () => void;
@@ -109,6 +110,32 @@ function ShareIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+// Media/Image icon
+function MediaIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z"
+        stroke="#810100"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8.5 10C9.32843 10 10 9.32843 10 8.5C10 7.67157 9.32843 7 8.5 7C7.67157 7 7 7.67157 7 8.5C7 9.32843 7.67157 10 8.5 10Z"
+        fill="#810100"
+      />
+      <Path
+        d="M21 15L16 10L5 21"
+        stroke="#810100"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 // Calculate read time from content
 function calculateReadTime(content: string): string {
   const wordsPerMinute = 200;
@@ -126,6 +153,7 @@ export function StoryCard({
   location,
   pageCount,
   readTime,
+  storyMedia,
   onSharePress,
   onLocationPress,
   onMoodPress,
@@ -134,6 +162,8 @@ export function StoryCard({
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
   const estimatedReadTime = readTime || calculateReadTime(content);
   const pageLabel = pageCount && pageCount > 0 ? `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}` : null;
+  const hasMedia = storyMedia && storyMedia.length > 0;
+  const mediaCount = hasMedia ? storyMedia.length : 0;
 
   const handlePress = () => {
     router.push({
@@ -171,7 +201,18 @@ export function StoryCard({
 
         {/* Read more indicator */}
         <View style={styles.readMoreRow}>
-          <Text style={styles.readTimeText}>{pageLabel ? `${pageLabel} · ` : ''}{estimatedReadTime}</Text>
+          <View style={styles.metaInfo}>
+            {pageLabel && <Text style={styles.readTimeText}>{pageLabel}</Text>}
+            {pageLabel && hasMedia && <Text style={styles.readTimeText}> · </Text>}
+            {hasMedia && (
+              <View style={styles.mediaIndicator}>
+                <MediaIcon size={12 * SCALE} />
+                <Text style={styles.readTimeText}>{mediaCount}</Text>
+              </View>
+            )}
+            {(pageLabel || hasMedia) && <Text style={styles.readTimeText}> · </Text>}
+            <Text style={styles.readTimeText}>{estimatedReadTime}</Text>
+          </View>
           <View style={styles.readMoreButton}>
             <Text style={styles.readMoreText}>Continue reading</Text>
             <ArrowRightIcon size={14 * SCALE} />
@@ -279,6 +320,15 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.08)',
     paddingTop: 10 * SCALE,
   },
+  metaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mediaIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3 * SCALE,
+  },
   readTimeText: {
     fontSize: 12 * SCALE,
     fontWeight: '500',
@@ -317,6 +367,53 @@ const styles = StyleSheet.create({
     fontSize: 11 * SCALE,
     fontWeight: '600',
     color: '#181717',
+  },
+  // Media styles
+  mediaRow: {
+    flexDirection: 'row',
+    gap: 8 * SCALE,
+    marginTop: 12 * SCALE,
+    marginBottom: 8 * SCALE,
+  },
+  mediaThumbnail: {
+    position: 'relative',
+    width: 60 * SCALE,
+    height: 60 * SCALE,
+    borderRadius: 8 * SCALE,
+    overflow: 'hidden',
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playIcon: {
+    color: '#FFFFFF',
+    fontSize: 16 * SCALE,
+  },
+  moreOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreText: {
+    color: '#FFFFFF',
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
   },
 });
 

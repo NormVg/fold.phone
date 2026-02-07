@@ -392,16 +392,19 @@ export default function MainScreen() {
                     }
 
                     if (entry.type === 'story') {
+                      const fullContent = entry.storyContent || entry.content || '';
+                      const firstPageContent = fullContent.split('\n\n---\n\n')[0];
                       return (
                         <View key={entry.id} style={styles.cardWrapper}>
                           <StoryCard
                             id={entry.id}
                             title={entry.title || 'Untitled Story'}
-                            content={entry.storyContent || entry.content || ''}
+                            content={firstPageContent}
                             time={time}
                             mood={mood}
                             location={entry.location}
                             pageCount={entry.pageCount}
+                            storyMedia={entry.storyMedia}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
                             onMoodPress={handleMoodPress}
@@ -413,73 +416,30 @@ export default function MainScreen() {
                     return null;
                   })}
 
-                  <View style={styles.cardWrapper}>
-                    <TextCard
-                      content="Just had the most amazing coffee this morning. Sometimes it's the little things that make a day great."
-                      time="04:20 PM"
-                      mood="HAPPY"
-                      onSharePress={handleSharePress}
-                      onLocationPress={handleLocationPress}
-                      onMoodPress={handleMoodPress}
-                    />
-                  </View>
-
-                  <View style={styles.cardWrapper}>
-                    <VoiceCard
-                      title="Rant about math"
-                      time="03:34 PM"
-                      duration="03:34"
-                      mood="SAD"
-                      onPlayPress={handlePlayPress}
-                      onSharePress={handleSharePress}
-                      onLocationPress={handleLocationPress}
-                      onMoodPress={handleMoodPress}
-                    />
-                  </View>
-
-                  <View style={styles.cardWrapper}>
-                    <PhotoCard
-                      title="Hello"
-                      time="02:15 PM"
-                      imageUri="https://picsum.photos/400/300"
-                      mood="SAD"
-                      onImagePress={handleImagePress}
-                      onSharePress={handleSharePress}
-                      onLocationPress={handleLocationPress}
-                      onMoodPress={handleMoodPress}
-                    />
-                  </View>
-
-                  <View style={styles.cardWrapper}>
-                    <VideoCard
-                      title="Sunset timelapse"
-                      time="01:45 PM"
-                      duration="00:32"
-                      thumbnailUri="https://picsum.photos/400/250"
-                      mood="HAPPY"
-                      onPlayPress={handlePlayPress}
-                      onSharePress={handleSharePress}
-                      onLocationPress={handleLocationPress}
-                      onMoodPress={handleMoodPress}
-                    />
-                  </View>
-
-                  <View style={styles.cardWrapper}>
-                    <StoryCard
-                      id="story-1"
-                      title="A Walk Through Memory Lane"
-                      content="Today I found myself walking through the old neighborhood where I grew up. The streets seemed smaller somehow, the trees much taller than I remembered. Every corner held a memory - the spot where I learned to ride a bike, the fence I used to climb, the window of my childhood bedroom where I would sit and dream about the future.
-
-It's strange how places can hold so much of who we were. The old bakery is still there, though under new ownership now. The smell of fresh bread still wafts through the morning air, just as it did twenty years ago. I bought a croissant, and for a moment, I was ten years old again, clutching coins in my small hands, feeling like the richest kid in the world.
-
-Some things change, and some things stay the same. But I realized today that the most important things - the feelings, the love, the sense of belonging - those live inside us forever. We carry our homes within our hearts, no matter how far we travel."
-                      time="12:30 PM"
-                      mood="HAPPY"
-                      onSharePress={handleSharePress}
-                      onLocationPress={handleLocationPress}
-                      onMoodPress={handleMoodPress}
-                    />
-                  </View>
+                  {/* Empty state card */}
+                  {entries.length === 0 && (
+                    <View style={styles.cardWrapper}>
+                      <View style={styles.emptyStateCard}>
+                        <View style={styles.emptyTopSection}>
+                          <View style={styles.emptyIconCircle}>
+                            <Svg width={16 * SCALE} height={16 * SCALE} viewBox="0 0 24 24" fill="none">
+                              <Path
+                                d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76zM17 3l4 4"
+                                stroke={TimelineColors.primary}
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          </View>
+                          <View style={styles.emptyBadge}>
+                            <Text style={styles.emptyBadgeText}>Start here</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.emptyContent}>Capture your first memory by tapping below</Text>
+                      </View>
+                    </View>
+                  )}
                 </ScrollView>
               </View>
             </View>
@@ -710,5 +670,48 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 120 * SCALE,
+  },
+  // Empty state styles
+  emptyStateCard: {
+    width: 340 * SCALE,
+    backgroundColor: '#FDFBF7',
+    borderRadius: 16 * SCALE,
+    padding: 14 * SCALE,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyTopSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12 * SCALE,
+  },
+  emptyIconCircle: {
+    width: 32 * SCALE,
+    height: 32 * SCALE,
+    borderRadius: 16 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10 * SCALE,
+  },
+  emptyBadge: {
+    backgroundColor: 'rgba(129, 1, 0, 0.1)',
+    paddingHorizontal: 10 * SCALE,
+    paddingVertical: 4 * SCALE,
+    borderRadius: 8 * SCALE,
+  },
+  emptyBadgeText: {
+    fontSize: 12 * SCALE,
+    fontWeight: '600',
+    color: TimelineColors.primary,
+  },
+  emptyContent: {
+    fontSize: 15 * SCALE,
+    fontWeight: '400',
+    color: 'rgba(0, 0, 0, 0.5)',
+    lineHeight: 22 * SCALE,
   },
 });
