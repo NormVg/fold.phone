@@ -11,8 +11,10 @@ import {
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { useTimeline } from '@/lib/timeline-context';
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -56,6 +58,7 @@ export default function MainScreen() {
   const [currentPage, setCurrentPage] = useState(PAGE_TIMELINE); // Start on Timeline (center)
   const { user: authUser } = useAuth();
   const user = authUser as User | null;
+  const { entries } = useTimeline();
 
   // Horizontal pager state (custom gesture pager)
   const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
@@ -134,6 +137,60 @@ export default function MainScreen() {
   const handleFoldersPress = () => console.log('Folders pressed');
 
   // Timeline handlers
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
+
+  const playAudio = async (uri: string | undefined, entryId: string) => {
+    if (!uri) {
+      console.log('No audio URI to play');
+      return;
+    }
+
+    try {
+      // If same entry is playing, toggle pause/resume
+      if (playingEntryId === entryId && soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if ('isPlaying' in status && status.isPlaying) {
+          await soundRef.current.pauseAsync();
+          setPlayingEntryId(null);
+          return;
+        } else {
+          await soundRef.current.playAsync();
+          setPlayingEntryId(entryId);
+          return;
+        }
+      }
+
+      // Stop and unload any currently playing sound
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+        setPlayingEntryId(null);
+      }
+
+      // Create and play new sound
+      const { sound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true }
+      );
+      soundRef.current = sound;
+      setPlayingEntryId(entryId);
+
+      // Clean up when done playing
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if ('didJustFinish' in status && status.didJustFinish) {
+          sound.unloadAsync();
+          soundRef.current = null;
+          setPlayingEntryId(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setPlayingEntryId(null);
+    }
+  };
+
   const handlePlayPress = () => console.log('Play pressed');
   const handleSharePress = () => console.log('Share pressed');
   const handleLocationPress = () => console.log('Location pressed');
@@ -229,6 +286,64 @@ export default function MainScreen() {
                   contentContainerStyle={styles.timelineScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
+                  {/* Dynamic entries from context */}
+                  {entries.map((entry) => {
+                    const time = new Date(entry.createdAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    });
+                    // Map MoodPicker values to VoiceCard mood strings
+                    const moodMap: Record<string, string> = {
+                      'V. Happy': 'HAPPY',
+                      'Happy': 'HAPPY',
+                      'Normal': 'NEUTRAL',
+                      'Sad': 'SAD',
+                      'V. Sad': 'SAD',
+                    };
+                    const mood = entry.mood ? moodMap[entry.mood] || 'NEUTRAL' : 'NEUTRAL';
+
+                    if (entry.type === 'audio') {
+                      const formatDuration = (seconds: number) => {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                      };
+                      return (
+                        <View key={entry.id} style={styles.cardWrapper}>
+                          <VoiceCard
+                            title={entry.caption || 'Voice memo'}
+                            time={time}
+                            duration={formatDuration(entry.audioDuration || 0)}
+                            mood={mood}
+                            isPlaying={playingEntryId === entry.id}
+                            onPlayPress={() => playAudio(entry.audioUri, entry.id)}
+                            onSharePress={handleSharePress}
+                            onLocationPress={handleLocationPress}
+                            onMoodPress={handleMoodPress}
+                          />
+                        </View>
+                      );
+                    }
+
+                    if (entry.type === 'text') {
+                      return (
+                        <View key={entry.id} style={styles.cardWrapper}>
+                          <TextCard
+                            content={entry.content || ''}
+                            time={time}
+                            mood={mood}
+                            onSharePress={handleSharePress}
+                            onLocationPress={handleLocationPress}
+                            onMoodPress={handleMoodPress}
+                          />
+                        </View>
+                      );
+                    }
+
+                    return null;
+                  })}
+
                   <View style={styles.cardWrapper}>
                     <TextCard
                       content="Just had the most amazing coffee this morning. Sometimes it's the little things that make a day great."

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -13,6 +13,7 @@ interface VoiceCardProps {
   time?: string; // e.g., "03:34 PM"
   duration?: string; // e.g., "03:34"
   mood?: string; // e.g., "SAD", "SAT"
+  isPlaying?: boolean; // Whether this card's audio is currently playing
   onPlayPress?: () => void;
   onSharePress?: () => void;
   onLocationPress?: () => void;
@@ -41,6 +42,17 @@ function PlayIcon({ size = 36 }: { size?: number }) {
         d="M14 12L26 18L14 24V12Z"
         fill="#FDFBF7"
       />
+    </Svg>
+  );
+}
+
+// Pause button icon
+function PauseIcon({ size = 36 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 36 36" fill="none">
+      <Circle cx="18" cy="18" r="17" fill="#810100" stroke="#810100" strokeWidth="1" />
+      <Rect x="12" y="10" width="4" height="16" rx="1" fill="#FDFBF7" />
+      <Rect x="20" y="10" width="4" height="16" rx="1" fill="#FDFBF7" />
     </Svg>
   );
 }
@@ -98,7 +110,7 @@ function AudioWaveform() {
   // Generate random-ish heights for waveform bars
   const barCount = 32;
   const heights = [4, 8, 12, 18, 14, 8, 16, 22, 12, 6, 14, 20, 10, 16, 24, 18, 8, 12, 20, 14, 10, 18, 24, 16, 8, 14, 10, 18, 22, 12, 8, 6];
-  
+
   return (
     <Svg width={200 * SCALE} height={28 * SCALE} viewBox="0 0 200 28">
       <Defs>
@@ -133,13 +145,14 @@ export function VoiceCard({
   time = '03:34 PM',
   duration = '03:34',
   mood = 'SAD',
+  isPlaying = false,
   onPlayPress,
   onSharePress,
   onLocationPress,
   onMoodPress,
 }: VoiceCardProps) {
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
-  
+
   return (
     <View style={styles.card}>
       {/* Top section: Mic icon + Title + Time */}
@@ -154,16 +167,16 @@ export function VoiceCard({
           <Text style={styles.timeText}>{time}</Text>
         </View>
       </View>
-      
+
       {/* Middle section: Play button + Waveform + Duration */}
       <View style={styles.waveformContainer}>
         <Pressable onPress={onPlayPress} style={styles.playButton}>
-          <PlayIcon size={36 * SCALE} />
+          {isPlaying ? <PauseIcon size={36 * SCALE} /> : <PlayIcon size={36 * SCALE} />}
         </Pressable>
         <AudioWaveform />
         <Text style={styles.durationText}>{duration}</Text>
       </View>
-      
+
       {/* Bottom section: Action buttons */}
       <View style={styles.bottomSection}>
         {/* Mood button */}
@@ -171,16 +184,16 @@ export function VoiceCard({
           <MoodIcon size={16 * SCALE} />
           <Text style={styles.actionText}>{mood}</Text>
         </Pressable>
-        
+
         {/* Location button */}
         <Pressable style={styles.actionButton} onPress={onLocationPress}>
           <LocationIcon size={16 * SCALE} />
           <Text style={styles.actionText}>LOCATION</Text>
         </Pressable>
-        
+
         {/* Spacer */}
         <View style={{ flex: 1 }} />
-        
+
         {/* Share button */}
         <Pressable style={styles.shareButton} onPress={onSharePress}>
           <ShareIcon size={16 * SCALE} />

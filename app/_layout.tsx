@@ -12,6 +12,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { TimelineProvider } from '@/lib/timeline-context';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -129,7 +130,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <TimelineProvider>
+        <RootLayoutNav />
+      </TimelineProvider>
     </AuthProvider>
   );
 }

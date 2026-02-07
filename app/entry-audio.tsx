@@ -1,4 +1,5 @@
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -197,6 +198,7 @@ function AudioWaveform({ isRecording, meterLevel }: { isRecording: boolean; mete
 
 export default function NewMemoryScreen() {
   const router = useRouter();
+  const { addEntry } = useTimeline();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -418,6 +420,15 @@ export default function NewMemoryScreen() {
   };
 
   const handleFoldIt = () => {
+    // Add entry to timeline
+    addEntry({
+      type: 'audio',
+      mood: selectedMood,
+      caption: caption || 'Voice memo',
+      audioUri: recordingUri || undefined,
+      audioDuration: recordingTime,
+    });
+
     console.log('Folding memory:', { recordingUri, recordingTime, selectedMood, caption });
     router.back();
   };
