@@ -1,6 +1,6 @@
-import { ResizeMode, Video } from 'expo-av';
-import React, { useRef, useState } from 'react';
-import { Dimensions, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { UnifiedMediaViewer } from '@/components/media/UnifiedMediaViewer';
+import React, { useState } from 'react';
+import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -99,65 +99,7 @@ function ShareIcon({ size = 16 }: { size?: number }) {
 }
 
 // Fullscreen Video Viewer Component
-export function VideoViewer({
-  isVisible,
-  onClose,
-  videoUri,
-  thumbnailUri,
-}: {
-  isVisible: boolean;
-  onClose: () => void;
-  videoUri?: string;
-  thumbnailUri?: string;
-}) {
-  const videoRef = useRef<Video>(null);
 
-  const handleClose = async () => {
-    if (videoRef.current) {
-      await videoRef.current.pauseAsync();
-    }
-    onClose();
-  };
-
-  return (
-    <Modal
-      visible={isVisible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={handleClose}
-    >
-      <View style={styles.modalContainer}>
-        {/* Close button */}
-        <Pressable style={styles.closeButton} onPress={handleClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </Pressable>
-
-        {/* Video Player */}
-        {videoUri ? (
-          <Video
-            ref={videoRef}
-            source={{ uri: videoUri }}
-            style={styles.fullscreenVideo}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={true}
-          />
-        ) : thumbnailUri ? (
-          <Image
-            source={{ uri: thumbnailUri }}
-            style={styles.fullscreenVideo}
-            resizeMode="contain"
-          />
-        ) : (
-          <View style={styles.noVideoContainer}>
-            <VideoIcon size={80} />
-            <Text style={styles.noVideoText}>No video available</Text>
-          </View>
-        )}
-      </View>
-    </Modal>
-  );
-}
 
 export function VideoCard({
   title = 'Video',
@@ -251,11 +193,17 @@ export function VideoCard({
       </View>
 
       {/* Reusable Fullscreen Video Viewer */}
-      <VideoViewer
+      {/* Reusable Unified Viewer */}
+      <UnifiedMediaViewer
         isVisible={isFullscreen}
         onClose={handleCloseFullscreen}
-        videoUri={videoUri}
-        thumbnailUri={thumbnailUri}
+        items={[{
+          id: `video-${videoUri}`,
+          uri: videoUri || '',
+          type: 'video',
+          thumbnailUri: thumbnailUri
+        }]}
+        initialIndex={0}
       />
     </>
   );

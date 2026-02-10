@@ -1,5 +1,6 @@
+import { UnifiedMediaViewer } from '@/components/media/UnifiedMediaViewer';
 import React, { useState } from 'react';
-import { Dimensions, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -84,90 +85,7 @@ function ShareIcon({ size = 16 }: { size?: number }) {
 }
 
 // Fullscreen Photo Viewer Component
-export function PhotoViewer({
-  isVisible,
-  onClose,
-  images,
-  initialIndex = 0,
-}: {
-  isVisible: boolean;
-  onClose: () => void;
-  images: string[];
-  initialIndex?: number;
-}) {
-  const [activeIndex, setActiveIndex] = useState(initialIndex);
 
-  // Reset active index when initialIndex changes or modal opens
-  React.useEffect(() => {
-    if (isVisible) {
-      setActiveIndex(initialIndex);
-    }
-  }, [isVisible, initialIndex]);
-
-  const handleFullscreenScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const screenWidth = Dimensions.get('window').width;
-    const index = Math.round(offsetX / screenWidth);
-    setActiveIndex(index);
-  };
-
-  return (
-    <Modal
-      visible={isVisible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalContainer}>
-        {/* Close button */}
-        <Pressable style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </Pressable>
-
-        {/* Swipeable images */}
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleFullscreenScroll}
-          scrollEventThrottle={16}
-          style={styles.fullscreenScrollView}
-          contentOffset={{ x: initialIndex * SCREEN_WIDTH, y: 0 }} // Initial Scroll Position
-        >
-          {images.map((uri, index) => (
-            <View key={index} style={styles.fullscreenImageContainer}>
-              <Image
-                source={{ uri }}
-                style={styles.fullscreenImage}
-                resizeMode="contain"
-              />
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Dot indicators */}
-        {images.length > 1 && (
-          <View style={styles.fullscreenDotsContainer}>
-            {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.fullscreenDot,
-                  index === activeIndex && styles.fullscreenActiveDot
-                ]}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Counter */}
-        <View style={styles.counterContainer}>
-          <Text style={styles.counterText}>{activeIndex + 1} / {images.length}</Text>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 export function PhotoCard({
   title = 'Photo',
@@ -265,10 +183,15 @@ export function PhotoCard({
       </View>
 
       {/* Reusable Fullscreen Viewer */}
-      <PhotoViewer
+      {/* Reusable Unified Viewer */}
+      <UnifiedMediaViewer
         isVisible={isFullscreen}
         onClose={handleCloseFullscreen}
-        images={allImages}
+        items={allImages.map((uri, index) => ({
+          id: `photo-${index}-${uri}`,
+          uri,
+          type: 'image',
+        }))}
         initialIndex={0}
       />
     </>
