@@ -271,10 +271,10 @@ export default function StoryScreen() {
         </View>
 
         {/* Media Gallery */}
-        {entry.storyMedia && entry.storyMedia.length > 0 && (
+        {entry.media && entry.media.length > 0 && (
           <View style={styles.mediaSection}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaScroll}>
-              {entry.storyMedia.map((media, index) => (
+              {entry.media.map((media, index) => (
                 <Pressable key={index} style={styles.mediaItem} onPress={() => openFullscreen(index)}>
                   <ExpoImage source={{ uri: media.uri }} style={styles.mediaImage} contentFit="cover" />
                   {media.type === 'video' && (
@@ -315,7 +315,7 @@ export default function StoryScreen() {
       </ScrollView>
 
       {/* Fullscreen Media Modal */}
-      {entry.storyMedia && entry.storyMedia.length > 0 && (
+      {entry.media && entry.media.length > 0 && (
         <Modal
           visible={isFullscreen}
           transparent={true}
@@ -339,7 +339,7 @@ export default function StoryScreen() {
               contentOffset={{ x: activeMediaIndex * SCREEN_WIDTH, y: 0 }}
               style={styles.fullscreenScrollView}
             >
-              {entry.storyMedia.map((media, index) => (
+              {entry.media.map((media, index) => (
                 <View key={index} style={styles.fullscreenMediaContainer}>
                   {media.type === 'video' ? (
                     <Video
@@ -362,9 +362,9 @@ export default function StoryScreen() {
             </ScrollView>
 
             {/* Dot indicators */}
-            {entry.storyMedia.length > 1 && (
+            {entry.media.length > 1 && (
               <View style={styles.dotsContainer}>
-                {entry.storyMedia.map((_, index) => (
+                {entry.media.map((_, index) => (
                   <View
                     key={index}
                     style={[
@@ -378,7 +378,7 @@ export default function StoryScreen() {
 
             {/* Counter */}
             <View style={styles.counterContainer}>
-              <Text style={styles.counterText}>{activeMediaIndex + 1} / {entry.storyMedia.length}</Text>
+              <Text style={styles.counterText}>{activeMediaIndex + 1} / {entry.media.length}</Text>
             </View>
           </View>
         </Modal>

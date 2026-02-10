@@ -559,8 +559,7 @@ export default function NewMemoryScreen() {
         type: 'audio',
         mood: selectedMood,
         caption: caption || 'Voice memo',
-        audioUri: finalUri || undefined,
-        audioDuration: recordingTime,
+        media: finalUri ? [{ uri: finalUri, type: 'audio' as const, duration: recordingTime }] : [],
         location: location || undefined,
       });
 

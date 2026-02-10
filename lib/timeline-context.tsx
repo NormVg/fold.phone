@@ -11,6 +11,13 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 
 export type EntryType = 'text' | 'audio' | 'photo' | 'video' | 'story';
 
+export interface EntryMedia {
+  uri: string;
+  type: 'image' | 'video' | 'audio';
+  thumbnailUri?: string;
+  duration?: number;
+}
+
 export interface TimelineEntry {
   id: string;
   type: EntryType;
@@ -22,24 +29,13 @@ export interface TimelineEntry {
   // Text entry
   content?: string;
 
-  // Audio entry
-  audioUri?: string;
-  audioDuration?: number; // seconds
-
-  // Photo entry (single or multiple)
-  photoUri?: string;
-  photoUris?: string[]; // For slideshow/carousel of photos
-
-  // Video entry
-  videoUri?: string;
-  thumbnailUri?: string;
-  videoDuration?: number;
-
   // Story entry
   title?: string;
   storyContent?: string;
   pageCount?: number;
-  storyMedia?: { uri: string; type: 'image' | 'video'; duration?: number }[];
+
+  // All media (photos, videos, audio) in one array
+  media: EntryMedia[];
 }
 
 interface TimelineContextValue {
@@ -56,7 +52,7 @@ const TimelineContext = createContext<TimelineContextValue | null>(null);
 
 /** Convert API response shape → local TimelineEntry shape */
 function mapResponseToEntry(r: TimelineEntryResponse): TimelineEntry {
-  const entry: TimelineEntry = {
+  return {
     id: r.id,
     type: r.type,
     createdAt: new Date(r.createdAt),
@@ -64,55 +60,20 @@ function mapResponseToEntry(r: TimelineEntryResponse): TimelineEntry {
     caption: r.caption || undefined,
     location: r.location || undefined,
     content: r.content || undefined,
-    audioUri: r.audioUri || undefined,
-    audioDuration: r.audioDuration || undefined,
-    videoUri: r.videoUri || undefined,
-    thumbnailUri: r.thumbnailUri || undefined,
-    videoDuration: r.videoDuration || undefined,
     title: r.title || undefined,
     storyContent: r.storyContent || undefined,
     pageCount: r.pageCount || undefined,
+    media: (r.media || []).map(m => ({
+      uri: m.uri,
+      type: m.type,
+      thumbnailUri: m.thumbnailUri || undefined,
+      duration: m.duration || undefined,
+    })),
   };
-
-  // Map media array back to photoUris / storyMedia
-  if (r.media && r.media.length > 0) {
-    if (r.type === 'photo') {
-      entry.photoUris = r.media.map(m => m.uri);
-      entry.photoUri = r.media[0]?.uri;
-    } else if (r.type === 'story') {
-      entry.storyMedia = r.media.map(m => ({
-        uri: m.uri,
-        type: m.type,
-        duration: m.duration || undefined,
-      }));
-    }
-  }
-
-  return entry;
-}
-
-/** Determine MIME type from file extension */
-function guessMimeType(uri: string): string {
-  const ext = uri.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'jpg': case 'jpeg': return 'image/jpeg';
-    case 'png': return 'image/png';
-    case 'gif': return 'image/gif';
-    case 'webp': return 'image/webp';
-    case 'mp4': return 'video/mp4';
-    case 'mov': return 'video/quicktime';
-    case 'm4a': return 'audio/mp4';
-    case 'aac': return 'audio/aac';
-    case 'wav': return 'audio/wav';
-    case 'mp3': return 'audio/mpeg';
-    case 'caf': return 'audio/x-caf';
-    default: return 'application/octet-stream';
-  }
 }
 
 /** Upload a local URI to Appwrite and return the remote URL, or pass through if already remote */
 async function ensureRemoteUri(uri: string): Promise<string> {
-  // Already a remote URL — pass through
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
 
   try {
@@ -121,7 +82,6 @@ async function ensureRemoteUri(uri: string): Promise<string> {
     return remoteUrl;
   } catch (err) {
     console.error('[Timeline] Appwrite upload failed for', uri, err);
-    // Fallback: return local URI so the entry still renders locally
     return uri;
   }
 }
@@ -161,62 +121,46 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const addEntry = useCallback(async (entry: Omit<TimelineEntry, 'id' | 'createdAt'>): Promise<TimelineEntry | null> => {
     setIsSaving(true);
     try {
-      // 1. Upload any local media files first
+      // 1. Upload any local media files
+      const uploadedMedia: CreateEntryPayload['media'] = [];
+
+      if (entry.media && entry.media.length > 0) {
+        for (const m of entry.media) {
+          const remoteUri = await ensureRemoteUri(m.uri);
+          const remoteThumbnail = m.thumbnailUri
+            ? await ensureRemoteUri(m.thumbnailUri)
+            : undefined;
+
+          uploadedMedia.push({
+            uri: remoteUri,
+            type: m.type,
+            thumbnailUri: remoteThumbnail || null,
+            duration: m.duration || null,
+          });
+        }
+      }
+
+      // 2. Build payload
       const payload: CreateEntryPayload = {
         type: entry.type,
         mood: entry.mood || null,
         location: entry.location || null,
         caption: entry.caption || null,
         content: entry.content || null,
+        title: entry.title || null,
+        storyContent: entry.storyContent || null,
+        pageCount: entry.pageCount || null,
+        media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
       };
 
-      // Audio
-      if (entry.type === 'audio' && entry.audioUri) {
-        payload.audioUri = await ensureRemoteUri(entry.audioUri);
-        payload.audioDuration = entry.audioDuration || null;
-      }
-
-      // Photo
-      if (entry.type === 'photo') {
-        if (entry.photoUris && entry.photoUris.length > 0) {
-          payload.photoUris = await Promise.all(entry.photoUris.map(ensureRemoteUri));
-          payload.photoUri = payload.photoUris[0];
-        } else if (entry.photoUri) {
-          payload.photoUri = await ensureRemoteUri(entry.photoUri);
-        }
-      }
-
-      // Video
-      if (entry.type === 'video' && entry.videoUri) {
-        payload.videoUri = await ensureRemoteUri(entry.videoUri);
-        payload.thumbnailUri = entry.thumbnailUri ? await ensureRemoteUri(entry.thumbnailUri) : null;
-        payload.videoDuration = entry.videoDuration || null;
-      }
-
-      // Story
-      if (entry.type === 'story') {
-        payload.title = entry.title || null;
-        payload.storyContent = entry.storyContent || null;
-        payload.pageCount = entry.pageCount || null;
-        if (entry.storyMedia && entry.storyMedia.length > 0) {
-          payload.storyMedia = await Promise.all(
-            entry.storyMedia.map(async (m) => ({
-              uri: await ensureRemoteUri(m.uri),
-              type: m.type,
-              duration: m.duration,
-            }))
-          );
-        }
-      }
-
-      // 2. Create entry in backend
+      // 3. Create entry in backend
       const { data, error } = await createTimelineEntry(payload);
       if (error || !data) {
         console.error('[Timeline] Create error:', error);
         return null;
       }
 
-      // 3. Add to local state (prepend, newest first)
+      // 4. Add to local state (prepend, newest first)
       const newEntry = mapResponseToEntry(data);
       setEntries(prev => [newEntry, ...prev]);
       return newEntry;

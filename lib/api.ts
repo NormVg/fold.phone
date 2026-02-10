@@ -218,7 +218,8 @@ export async function deleteAccount(): Promise<{
 export interface MediaItem {
   id: string;
   uri: string;
-  type: "image" | "video";
+  type: "image" | "video" | "audio";
+  thumbnailUri?: string | null;
   duration: number | null;
   sortOrder: number;
 }
@@ -233,11 +234,6 @@ export interface TimelineEntryResponse {
   location: string | null;
   caption: string | null;
   content: string | null;
-  audioUri: string | null;
-  audioDuration: number | null;
-  videoUri: string | null;
-  thumbnailUri: string | null;
-  videoDuration: number | null;
   title: string | null;
   storyContent: string | null;
   pageCount: number | null;
@@ -250,17 +246,10 @@ export interface CreateEntryPayload {
   location?: string | null;
   caption?: string | null;
   content?: string | null;
-  audioUri?: string | null;
-  audioDuration?: number | null;
-  photoUri?: string | null;
-  photoUris?: string[];
-  videoUri?: string | null;
-  thumbnailUri?: string | null;
-  videoDuration?: number | null;
   title?: string | null;
   storyContent?: string | null;
   pageCount?: number | null;
-  storyMedia?: { uri: string; type: "image" | "video"; duration?: number }[];
+  media?: { uri: string; type: "image" | "video" | "audio"; thumbnailUri?: string | null; duration?: number | null }[];
 }
 
 /**

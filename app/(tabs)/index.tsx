@@ -314,17 +314,18 @@ export default function MainScreen() {
                         const secs = seconds % 60;
                         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                       };
+                      const audioMedia = entry.media.find(m => m.type === 'audio');
                       return (
                         <View key={entry.id} style={styles.cardWrapper}>
                           <VoiceCard
                             title={entry.caption || 'Voice memo'}
                             time={time}
-                            duration={formatDuration(entry.audioDuration || 0)}
+                            duration={formatDuration(audioMedia?.duration || 0)}
                             mood={mood}
                             location={entry.location}
                             isPlaying={playingEntryId === entry.id}
                             progress={playingEntryId === entry.id ? playbackProgress : 0}
-                            onPlayPress={() => playAudio(entry.audioUri, entry.id)}
+                            onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
                             onMoodPress={handleMoodPress}
@@ -350,13 +351,14 @@ export default function MainScreen() {
                     }
 
                     if (entry.type === 'photo') {
+                      const photoUris = entry.media.filter(m => m.type === 'image').map(m => m.uri);
                       return (
                         <View key={entry.id} style={styles.cardWrapper}>
                           <PhotoCard
                             title={entry.caption || 'Photo'}
                             time={time}
-                            imageUri={entry.photoUri}
-                            imageUris={entry.photoUris}
+                            imageUri={photoUris[0]}
+                            imageUris={photoUris.length > 1 ? photoUris : undefined}
                             mood={mood}
                             location={entry.location}
                             onSharePress={handleSharePress}
@@ -373,14 +375,15 @@ export default function MainScreen() {
                         const secs = seconds % 60;
                         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                       };
+                      const videoMedia = entry.media.find(m => m.type === 'video');
                       return (
                         <View key={entry.id} style={styles.cardWrapper}>
                           <VideoCard
                             title={entry.caption || 'Video'}
                             time={time}
-                            duration={formatDuration(entry.videoDuration || 0)}
-                            thumbnailUri={entry.thumbnailUri}
-                            videoUri={entry.videoUri}
+                            duration={formatDuration(videoMedia?.duration || 0)}
+                            thumbnailUri={videoMedia?.thumbnailUri}
+                            videoUri={videoMedia?.uri}
                             mood={mood}
                             location={entry.location}
                             onSharePress={handleSharePress}
@@ -394,6 +397,7 @@ export default function MainScreen() {
                     if (entry.type === 'story') {
                       const fullContent = entry.storyContent || entry.content || '';
                       const firstPageContent = fullContent.split('\n\n---\n\n')[0];
+                      const storyMediaItems = entry.media.filter(m => m.type === 'image' || m.type === 'video');
                       return (
                         <View key={entry.id} style={styles.cardWrapper}>
                           <StoryCard
@@ -404,7 +408,7 @@ export default function MainScreen() {
                             mood={mood}
                             location={entry.location}
                             pageCount={entry.pageCount}
-                            storyMedia={entry.storyMedia}
+                            storyMedia={storyMediaItems.length > 0 ? storyMediaItems.map(m => ({ uri: m.uri, type: m.type as 'image' | 'video', duration: m.duration })) : undefined}
                             onSharePress={handleSharePress}
                             onLocationPress={handleLocationPress}
                             onMoodPress={handleMoodPress}

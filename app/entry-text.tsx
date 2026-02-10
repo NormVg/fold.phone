@@ -237,14 +237,13 @@ export default function EntryTextScreen() {
         const images = attachedMedia.filter(m => m.type === 'image');
         const videos = attachedMedia.filter(m => m.type === 'video');
 
-        // Save all images as a single photo entry with photoUris array (slideshow)
+        // Save all images as a single photo entry with media array
         if (images.length > 0) {
           await addEntry({
             type: 'photo',
             mood: selectedMood,
             caption: textContent.trim() || undefined,
-            photoUris: images.map(img => img.uri),
-            photoUri: images[0].uri,
+            media: images.map(img => ({ uri: img.uri, type: 'image' as const })),
             location: location || undefined,
           });
         }
@@ -255,9 +254,7 @@ export default function EntryTextScreen() {
             type: 'video',
             mood: selectedMood,
             caption: textContent.trim() || undefined,
-            videoUri: video.uri,
-            thumbnailUri: video.uri,
-            videoDuration: video.duration || 0,
+            media: [{ uri: video.uri, type: 'video' as const, thumbnailUri: video.uri, duration: video.duration || 0 }],
             location: location || undefined,
           });
         }
@@ -268,6 +265,7 @@ export default function EntryTextScreen() {
           mood: selectedMood,
           content: textContent.trim(),
           location: location || undefined,
+          media: [],
         });
       }
 

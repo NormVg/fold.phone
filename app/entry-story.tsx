@@ -533,7 +533,11 @@ export default function EntryStoryScreen() {
         title: storyTitle.trim(),
         storyContent: storyContent,
         pageCount: pages.length,
-        storyMedia: allMedia.length > 0 ? allMedia : undefined,
+        media: allMedia.length > 0 ? allMedia.map(m => ({
+          uri: m.uri,
+          type: m.type as 'image' | 'video',
+          duration: m.duration,
+        })) : [],
       });
 
       // Navigate to timeline
