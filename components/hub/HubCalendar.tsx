@@ -61,7 +61,9 @@ const COLORS = {
 };
 
 // Activity levels map to opacity values from SVG
-export type ActivityLevel = 0 | 1 | 2 | 3;
+// Activity levels map to opacity values from SVG
+import { ActivityLevel } from './types';
+export type { ActivityLevel };
 
 const getActivityColor = (level: ActivityLevel): string | undefined => {
   switch (level) {

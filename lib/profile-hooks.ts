@@ -1,4 +1,4 @@
-import { ActivityLevel } from '@/components/profile';
+import { ActivityLevel } from '@/components/hub/types';
 import { useTimeline } from '@/lib/timeline-context';
 import { useMemo } from 'react';
 

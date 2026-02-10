@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -7,7 +7,7 @@ const SCALE = SCREEN_WIDTH / 393;
 /**
  * FoldGrid - Activity heatmap grid showing weekly activity
  * Based on home:profie:foldgrid.svg (exact measurements)
- * 
+ *
  * SVG Analysis:
  * - Card: rect x=4 y=2 width=358 height=310 rx=20
  * - Day labels (M T W T F S S) at approx y=30-45
@@ -43,11 +43,11 @@ const CARD_HEIGHT = VERTICAL_PADDING + HEADER_HEIGHT + HEADER_TO_GRID_GAP + GRID
 const GRID_WIDTH = (CELL_SIZE * 7) + (COL_GAP * 6);
 const HORIZONTAL_PADDING = (CARD_WIDTH - GRID_WIDTH) / 2;
 
-const COLUMN_X = Array.from({ length: 7 }, (_, i) => 
+const COLUMN_X = Array.from({ length: 7 }, (_, i) =>
   HORIZONTAL_PADDING + (i * (CELL_SIZE + COL_GAP))
 );
 
-const ROW_Y = Array.from({ length: 5 }, (_, i) => 
+const ROW_Y = Array.from({ length: 5 }, (_, i) =>
   VERTICAL_PADDING + HEADER_HEIGHT + HEADER_TO_GRID_GAP + (i * (CELL_SIZE + ROW_GAP))
 );
 
@@ -55,12 +55,13 @@ const ROW_Y = Array.from({ length: 5 }, (_, i) =>
 const HEADER_Y = VERTICAL_PADDING;
 
 // Activity levels map to colors from SVG
-export type ActivityLevel = 0 | 1 | 2 | 3;
+import { ActivityLevel } from '@/components/hub/types';
+export type { ActivityLevel };
 
 const ACTIVITY_COLORS: Record<ActivityLevel, string> = {
   0: '#EDEADC', // No activity (background)
   1: '#C19999', // Low activity
-  2: '#9A3433', // Medium activity  
+  2: '#9A3433', // Medium activity
   3: '#810100', // High activity
 };
 
@@ -90,11 +91,11 @@ export function FoldGrid({ activityData }: FoldGridProps) {
     <View style={styles.card}>
       {/* Day labels header - positioned absolutely */}
       {DAYS.map((day, index) => (
-        <Text 
-          key={`header-${index}`} 
+        <Text
+          key={`header-${index}`}
           style={[
             styles.headerText,
-            { 
+            {
               left: COLUMN_X[index] + (CELL_SIZE / 2),
               top: HEADER_Y,
             }
@@ -103,7 +104,7 @@ export function FoldGrid({ activityData }: FoldGridProps) {
           {day}
         </Text>
       ))}
-      
+
       {/* Activity grid - each cell positioned absolutely */}
       {rows.map((week, rowIndex) => (
         week.map((level, colIndex) => (

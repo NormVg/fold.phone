@@ -1,4 +1,4 @@
-import { ActivityLevel, HubCalendar, HubPanelGrid } from '@/components/hub';
+import { HubCalendar, HubPanelGrid } from '@/components/hub';
 import {
   BadgesSection,
   FoldDataCards,
@@ -12,6 +12,7 @@ import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
+import { useHubActivity } from '@/lib/use-hub-activity';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -71,16 +72,7 @@ export default function MainScreen() {
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
 
-  const activityData = useMemo(() => {
-    const data = new Map<number, ActivityLevel>();
-    data.set(4, 3);
-    data.set(6, 2);
-    data.set(9, 2);
-    data.set(15, 1);
-    data.set(16, 2);
-    data.set(17, 3);
-    return data;
-  }, []);
+  const activityData = useHubActivity(calendarYear, calendarMonth);
 
   const navigateToPage = useCallback((page: number) => {
     const clamped = Math.max(PAGE_HUB, Math.min(PAGE_PROFILE, page));

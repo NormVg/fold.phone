@@ -9,6 +9,7 @@ import {
 import { uploadToAppwrite } from '@/lib/appwrite';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { useAuth } from './auth-context';
 
 export type EntryType = 'text' | 'audio' | 'photo' | 'video' | 'story';
 
@@ -85,6 +86,9 @@ async function ensureRemoteUri(uri: string): Promise<string> {
 }
 
 export function TimelineProvider({ children }: { children: ReactNode }) {
+  // Defensive check for useAuth in case of circular dependency issues
+  const auth = typeof useAuth === 'function' ? useAuth() : { isAuthenticated: false, user: null };
+  const { isAuthenticated, user } = auth;
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,6 +96,12 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
   // Fetch entries from backend on mount
   const refreshEntries = useCallback(async () => {
+    // Only fetch if authenticated
+    if (!isAuthenticated || !user) {
+      if (!isLoading) setIsLoading(true); // Ensure loading state if weird race
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await getTimelineEntries(50, 0);
@@ -107,14 +117,19 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
-    if (!hasFetched.current) {
+    // Reset hasFetched if user changes (e.g. login)
+    if (isAuthenticated && user && !hasFetched.current) {
       hasFetched.current = true;
       refreshEntries();
+    } else if (!isAuthenticated) {
+      // If logged out, reset
+      hasFetched.current = false;
+      setEntries([]);
     }
-  }, [refreshEntries]);
+  }, [isAuthenticated, user, refreshEntries]);
 
   const addEntry = useCallback(async (entry: Omit<TimelineEntry, 'id' | 'createdAt'>): Promise<TimelineEntry | null> => {
     setIsSaving(true);

@@ -1,8 +1,9 @@
-import { ActivityLevel, HubCalendar, HubPanelGrid } from '@/components/hub';
+import { HubCalendar, HubPanelGrid } from '@/components/hub';
 import { BottomNavBar, TimelineHeader } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
+import { useHubActivity } from '@/lib/use-hub-activity';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Dimensions, ScrollView, StatusBar, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,21 +35,8 @@ export default function HubScreen() {
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
 
-  // Sample activity data - matching the design SVG pattern
-  const activityData = useMemo(() => {
-    const data = new Map<number, ActivityLevel>();
-    // Activity pattern from the SVG (September 2025)
-    // Row 2: 4(0.3), 6(0.23)
-    // Row 3: 9(0.2), 15(0.1), 16(0.19), 17(0.3)
-    // Row 4: 18(today - special)
-    data.set(4, 3);   // High activity
-    data.set(6, 2);   // Medium activity
-    data.set(9, 2);   // Medium activity
-    data.set(15, 1);  // Low activity
-    data.set(16, 2);  // Medium activity
-    data.set(17, 3);  // High activity
-    return data;
-  }, []);
+  // Real activity data from hook
+  const activityData = useHubActivity(calendarYear, calendarMonth);
 
   const handlePrevMonth = () => {
     if (calendarMonth === 0) {
