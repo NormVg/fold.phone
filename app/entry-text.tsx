@@ -1,5 +1,6 @@
 import { MediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { validateMediaSize } from '@/lib/media';
 import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -108,8 +109,26 @@ export default function EntryTextScreen() {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const newPhotos = result.assets.map(asset => ({ uri: asset.uri, type: 'image' as const }));
-      setAttachedMedia(prev => [...prev, ...newPhotos]);
+      // Validate file sizes
+      const validPhotos: { uri: string; type: 'image' }[] = [];
+      const oversized: string[] = [];
+
+      for (const asset of result.assets) {
+        const err = await validateMediaSize(asset.uri, 'image');
+        if (err) {
+          oversized.push(err);
+        } else {
+          validPhotos.push({ uri: asset.uri, type: 'image' as const });
+        }
+      }
+
+      if (oversized.length > 0) {
+        Alert.alert('File Too Large', oversized[0]);
+      }
+
+      if (validPhotos.length > 0) {
+        setAttachedMedia(prev => [...prev, ...validPhotos]);
+      }
     }
   };
 
@@ -152,6 +171,14 @@ export default function EntryTextScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+
+      // Validate file size
+      const sizeError = await validateMediaSize(asset.uri, 'video');
+      if (sizeError) {
+        Alert.alert('File Too Large', sizeError);
+        return;
+      }
+
       // expo-image-picker provides duration in milliseconds
       const durationInSeconds = asset.duration ? Math.round(asset.duration / 1000) : 0;
       setAttachedMedia([{ uri: asset.uri, type: 'video', duration: durationInSeconds }]);

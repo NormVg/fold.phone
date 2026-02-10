@@ -1,5 +1,6 @@
 import { StoryMediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood/MoodPicker';
+import { validateMediaSize } from '@/lib/media';
 import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -403,15 +404,33 @@ export default function EntryStoryScreen() {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const newMedia = result.assets.map(asset => ({
-        uri: asset.uri,
-        type: (asset.type === 'video' ? 'video' : 'image') as 'image' | 'video',
-        duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
-      }));
+      // Validate file sizes
+      const validMedia: { uri: string; type: 'image' | 'video'; duration?: number }[] = [];
+      const oversized: string[] = [];
 
-      const newPages = [...pages];
-      newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...newMedia];
-      setPages(newPages);
+      for (const asset of result.assets) {
+        const mediaType = asset.type === 'video' ? 'video' : 'image';
+        const err = await validateMediaSize(asset.uri, mediaType as 'image' | 'video');
+        if (err) {
+          oversized.push(err);
+        } else {
+          validMedia.push({
+            uri: asset.uri,
+            type: (asset.type === 'video' ? 'video' : 'image') as 'image' | 'video',
+            duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
+          });
+        }
+      }
+
+      if (oversized.length > 0) {
+        Alert.alert('File Too Large', oversized[0]);
+      }
+
+      if (validMedia.length > 0) {
+        const newPages = [...pages];
+        newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...validMedia];
+        setPages(newPages);
+      }
     }
   };
 
@@ -433,15 +452,32 @@ export default function EntryStoryScreen() {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const newMedia = result.assets.map(asset => ({
-        uri: asset.uri,
-        type: 'video' as const,
-        duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
-      }));
+      // Validate file sizes
+      const validMedia: { uri: string; type: 'video'; duration?: number }[] = [];
+      const oversized: string[] = [];
 
-      const newPages = [...pages];
-      newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...newMedia];
-      setPages(newPages);
+      for (const asset of result.assets) {
+        const err = await validateMediaSize(asset.uri, 'video');
+        if (err) {
+          oversized.push(err);
+        } else {
+          validMedia.push({
+            uri: asset.uri,
+            type: 'video' as const,
+            duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
+          });
+        }
+      }
+
+      if (oversized.length > 0) {
+        Alert.alert('File Too Large', oversized[0]);
+      }
+
+      if (validMedia.length > 0) {
+        const newPages = [...pages];
+        newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...validMedia];
+        setPages(newPages);
+      }
     }
   };
 
