@@ -92,7 +92,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const hasFetched = useRef(false);
+  const lastUserId = useRef<string | null>(null);
 
   // Fetch entries from backend on mount
   const refreshEntries = useCallback(async () => {
@@ -120,16 +120,23 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    // Reset hasFetched if user changes (e.g. login)
-    if (isAuthenticated && user && !hasFetched.current) {
-      hasFetched.current = true;
-      refreshEntries();
-    } else if (!isAuthenticated) {
-      // If logged out, reset
-      hasFetched.current = false;
+    const currentUserId = user?.id ?? null;
+
+    if (isAuthenticated && currentUserId) {
+      // User changed (switched accounts) or first login — clear old data and refetch
+      if (lastUserId.current !== currentUserId) {
+        console.log('[Timeline] User changed:', lastUserId.current, '->', currentUserId);
+        lastUserId.current = currentUserId;
+        setEntries([]); // Clear stale data from previous user immediately
+        refreshEntries();
+      }
+    } else {
+      // Logged out — reset everything
+      lastUserId.current = null;
       setEntries([]);
+      setIsLoading(false);
     }
-  }, [isAuthenticated, user, refreshEntries]);
+  }, [isAuthenticated, user?.id, refreshEntries]);
 
   const addEntry = useCallback(async (entry: Omit<TimelineEntry, 'id' | 'createdAt'>): Promise<TimelineEntry | null> => {
     setIsSaving(true);
