@@ -15,7 +15,7 @@ import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -58,7 +58,7 @@ export default function MainScreen() {
   const [currentPage, setCurrentPage] = useState(PAGE_TIMELINE); // Start on Timeline (center)
   const { user: authUser } = useAuth();
   const user = authUser as User | null;
-  const { entries } = useTimeline();
+  const { entries, isLoading: isTimelineLoading, refreshEntries } = useTimeline();
 
   // Horizontal pager state (custom gesture pager)
   const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
@@ -416,8 +416,16 @@ export default function MainScreen() {
                     return null;
                   })}
 
+                  {/* Loading indicator */}
+                  {isTimelineLoading && entries.length === 0 && (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <ActivityIndicator size="small" color={TimelineColors.primary} />
+                      <Text style={{ color: '#8A8780', fontSize: 13, marginTop: 8 }}>Loading memories...</Text>
+                    </View>
+                  )}
+
                   {/* Empty state card */}
-                  {entries.length === 0 && (
+                  {!isTimelineLoading && entries.length === 0 && (
                     <View style={styles.cardWrapper}>
                       <View style={styles.emptyStateCard}>
                         <View style={styles.emptyTopSection}>

@@ -260,7 +260,7 @@ function AudioWaveform({ isRecording, meterLevel }: { isRecording: boolean; mete
 
 export default function NewMemoryScreen() {
   const router = useRouter();
-  const { addEntry } = useTimeline();
+  const { addEntry, isSaving } = useTimeline();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -552,17 +552,22 @@ export default function NewMemoryScreen() {
     }
 
     // Add entry to timeline with the final URI
-    addEntry({
-      type: 'audio',
-      mood: selectedMood,
-      caption: caption || 'Voice memo',
-      audioUri: finalUri || undefined,
-      audioDuration: recordingTime,
-      location: location || undefined,
-    });
+    try {
+      await addEntry({
+        type: 'audio',
+        mood: selectedMood,
+        caption: caption || 'Voice memo',
+        audioUri: finalUri || undefined,
+        audioDuration: recordingTime,
+        location: location || undefined,
+      });
 
-    console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
-    router.back();
+      console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
+      router.back();
+    } catch (err) {
+      console.error('Failed to fold:', err);
+      Alert.alert('Error', 'Failed to save your entry. Please try again.');
+    }
   };
 
   return (

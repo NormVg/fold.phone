@@ -210,3 +210,172 @@ export async function deleteAccount(): Promise<{
     error: result.error,
   };
 }
+
+// =============================================================================
+// Timeline API
+// =============================================================================
+
+export interface MediaItem {
+  id: string;
+  uri: string;
+  type: "image" | "video";
+  duration: number | null;
+  sortOrder: number;
+}
+
+export interface TimelineEntryResponse {
+  id: string;
+  userId: string;
+  type: "text" | "audio" | "photo" | "video" | "story";
+  createdAt: string;
+  updatedAt: string;
+  mood: string | null;
+  location: string | null;
+  caption: string | null;
+  content: string | null;
+  audioUri: string | null;
+  audioDuration: number | null;
+  videoUri: string | null;
+  thumbnailUri: string | null;
+  videoDuration: number | null;
+  title: string | null;
+  storyContent: string | null;
+  pageCount: number | null;
+  media: MediaItem[];
+}
+
+export interface CreateEntryPayload {
+  type: "text" | "audio" | "photo" | "video" | "story";
+  mood?: string | null;
+  location?: string | null;
+  caption?: string | null;
+  content?: string | null;
+  audioUri?: string | null;
+  audioDuration?: number | null;
+  photoUri?: string | null;
+  photoUris?: string[];
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
+  videoDuration?: number | null;
+  title?: string | null;
+  storyContent?: string | null;
+  pageCount?: number | null;
+  storyMedia?: { uri: string; type: "image" | "video"; duration?: number }[];
+}
+
+/**
+ * Create a new timeline entry
+ */
+export async function createTimelineEntry(
+  payload: CreateEntryPayload
+): Promise<{ data: TimelineEntryResponse | null; error: string | null }> {
+  return apiRequest<TimelineEntryResponse>("/api/timeline", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Get paginated list of timeline entries
+ */
+export async function getTimelineEntries(
+  limit: number = 20,
+  offset: number = 0
+): Promise<{ data: TimelineEntryResponse[] | null; error: string | null }> {
+  const result = await apiRequest<{
+    data: TimelineEntryResponse[];
+    pagination: { limit: number; offset: number; count: number };
+  }>(`/api/timeline?limit=${limit}&offset=${offset}`);
+
+  if (result.error) return { data: null, error: result.error };
+
+  // apiRequest unwraps .data, but backend returns { success, data, pagination }
+  // apiRequest returns json.data ?? json, so result.data is the array OR the full object
+  const entries = Array.isArray(result.data)
+    ? result.data
+    : (result.data as any)?.data ?? [];
+
+  return { data: entries, error: null };
+}
+
+/**
+ * Get a single timeline entry by ID
+ */
+export async function getTimelineEntry(
+  id: string
+): Promise<{ data: TimelineEntryResponse | null; error: string | null }> {
+  return apiRequest<TimelineEntryResponse>(`/api/timeline/${id}`);
+}
+
+/**
+ * Update a timeline entry
+ */
+export async function updateTimelineEntry(
+  id: string,
+  data: { mood?: string; location?: string | null; caption?: string | null; content?: string | null }
+): Promise<{ data: TimelineEntryResponse | null; error: string | null }> {
+  return apiRequest<TimelineEntryResponse>(`/api/timeline/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Delete a timeline entry
+ */
+export async function deleteTimelineEntry(
+  id: string
+): Promise<{ success: boolean; error: string | null }> {
+  const result = await apiRequest<{ message: string }>(`/api/timeline/${id}`, {
+    method: "DELETE",
+  });
+  return {
+    success: result.error === null,
+    error: result.error,
+  };
+}
+
+/**
+ * Upload a media file (photo, video, audio). Returns the remote URL.
+ */
+export async function uploadMedia(
+  uri: string,
+  mimeType: string = "image/jpeg"
+): Promise<{ url: string | null; error: string | null }> {
+  try {
+    const cookie = await getCookie();
+    const formData = new FormData();
+    const filename = uri.split("/").pop() || "file";
+
+    formData.append("file", {
+      uri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const response = await fetch(`${API_BASE}/api/upload`, {
+      method: "POST",
+      headers: {
+        "expo-origin": "fold://",
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: formData,
+      credentials: "omit",
+    });
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      return { url: null, error: json.message || json.error || "Upload failed" };
+    }
+
+    const uploadData = json.data ?? json;
+    return { url: uploadData.url, error: null };
+  } catch (error) {
+    console.error("Upload media error:", error);
+    return {
+      url: null,
+      error: error instanceof Error ? error.message : "Upload failed",
+    };
+  }
+}

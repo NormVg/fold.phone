@@ -69,7 +69,7 @@ function LocationIcon({ size = 24 }: { size?: number }) {
 
 export default function EntryTextScreen() {
   const router = useRouter();
-  const { addEntry } = useTimeline();
+  const { addEntry, isSaving } = useTimeline();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [textContent, setTextContent] = useState('');
   const [location, setLocation] = useState<string | null>(null);
@@ -215,7 +215,7 @@ export default function EntryTextScreen() {
     }
   };
 
-  const handleFoldIt = () => {
+  const handleFoldIt = async () => {
     // Require mood selection
     if (!selectedMood) {
       Alert.alert('Choose a mood', 'Please select how you\'re feeling before folding.');
@@ -228,48 +228,53 @@ export default function EntryTextScreen() {
       return;
     }
 
-    // If we have attached media, handle appropriately
-    if (attachedMedia.length > 0) {
-      // Separate images and videos
-      const images = attachedMedia.filter(m => m.type === 'image');
-      const videos = attachedMedia.filter(m => m.type === 'video');
+    try {
+      // If we have attached media, handle appropriately
+      if (attachedMedia.length > 0) {
+        // Separate images and videos
+        const images = attachedMedia.filter(m => m.type === 'image');
+        const videos = attachedMedia.filter(m => m.type === 'video');
 
-      // Save all images as a single photo entry with photoUris array (slideshow)
-      if (images.length > 0) {
-        addEntry({
-          type: 'photo',
+        // Save all images as a single photo entry with photoUris array (slideshow)
+        if (images.length > 0) {
+          await addEntry({
+            type: 'photo',
+            mood: selectedMood,
+            caption: textContent.trim() || undefined,
+            photoUris: images.map(img => img.uri),
+            photoUri: images[0].uri,
+            location: location || undefined,
+          });
+        }
+
+        // Save each video as separate entry
+        for (const video of videos) {
+          await addEntry({
+            type: 'video',
+            mood: selectedMood,
+            caption: textContent.trim() || undefined,
+            videoUri: video.uri,
+            thumbnailUri: video.uri,
+            videoDuration: video.duration || 0,
+            location: location || undefined,
+          });
+        }
+      } else {
+        // No media, just text entry
+        await addEntry({
+          type: 'text',
           mood: selectedMood,
-          caption: textContent.trim() || undefined,
-          photoUris: images.map(img => img.uri),
-          photoUri: images[0].uri, // First image as primary
+          content: textContent.trim(),
           location: location || undefined,
         });
       }
 
-      // Save each video as separate entry
-      videos.forEach((video) => {
-        addEntry({
-          type: 'video',
-          mood: selectedMood,
-          caption: textContent.trim() || undefined,
-          videoUri: video.uri,
-          thumbnailUri: video.uri, // Use first frame as thumbnail
-          videoDuration: video.duration || 0,
-          location: location || undefined,
-        });
-      });
-    } else {
-      // No media, just text entry
-      addEntry({
-        type: 'text',
-        mood: selectedMood,
-        content: textContent.trim(),
-        location: location || undefined,
-      });
+      console.log('Folding memory:', { textContent, selectedMood, location, mediaCount: attachedMedia.length });
+      router.back();
+    } catch (err) {
+      console.error('Failed to fold:', err);
+      Alert.alert('Error', 'Failed to save your entry. Please try again.');
     }
-
-    console.log('Folding memory:', { textContent, selectedMood, location, mediaCount: attachedMedia.length });
-    router.back();
   };
 
   const handleStoryMode = () => {

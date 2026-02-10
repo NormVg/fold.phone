@@ -19,7 +19,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.tao.fold"
+      "package": "com.taohq.fold"
     },
     "web": {
       "output": "static",

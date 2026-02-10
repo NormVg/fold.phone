@@ -274,7 +274,7 @@ interface StoryPage {
 
 export default function EntryStoryScreen() {
   const router = useRouter();
-  const { addEntry } = useTimeline();
+  const { addEntry, isSaving } = useTimeline();
   const [storyTitle, setStoryTitle] = useState('');
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [location, setLocation] = useState<string | null>(null);
@@ -498,7 +498,7 @@ export default function EntryStoryScreen() {
     setPages(newPages);
   };
 
-  const handleFoldStory = () => {
+  const handleFoldStory = async () => {
     if (!storyTitle.trim()) {
       Alert.alert('Add a title', 'Please give your story a title.');
       return;
@@ -523,18 +523,23 @@ export default function EntryStoryScreen() {
     // Collect all media from all pages
     const allMedia = pages.flatMap(page => page.media);
 
-    addEntry({
-      type: 'story',
-      mood: selectedMood,
-      location: location || undefined,
-      title: storyTitle.trim(),
-      storyContent: storyContent,
-      pageCount: pages.length,
-      storyMedia: allMedia.length > 0 ? allMedia : undefined,
-    });
+    try {
+      await addEntry({
+        type: 'story',
+        mood: selectedMood,
+        location: location || undefined,
+        title: storyTitle.trim(),
+        storyContent: storyContent,
+        pageCount: pages.length,
+        storyMedia: allMedia.length > 0 ? allMedia : undefined,
+      });
 
-    // Navigate to timeline
-    router.replace('/');
+      // Navigate to timeline
+      router.replace('/');
+    } catch (err) {
+      console.error('Failed to fold story:', err);
+      Alert.alert('Error', 'Failed to save your story. Please try again.');
+    }
   };
 
   const formatDuration = (seconds: number) => {
