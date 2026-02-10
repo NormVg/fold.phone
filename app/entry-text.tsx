@@ -5,6 +5,7 @@ import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -250,11 +251,20 @@ export default function EntryTextScreen() {
 
         // Save each video as separate entry
         for (const video of videos) {
+          // Generate a real thumbnail from the video
+          let thumbnail: string | undefined;
+          try {
+            const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(video.uri, { time: 500 });
+            thumbnail = thumbUri;
+          } catch (e) {
+            console.warn('Failed to generate video thumbnail:', e);
+          }
+
           await addEntry({
             type: 'video',
             mood: selectedMood,
             caption: textContent.trim() || undefined,
-            media: [{ uri: video.uri, type: 'video' as const, thumbnailUri: video.uri, duration: video.duration || 0 }],
+            media: [{ uri: video.uri, type: 'video' as const, thumbnailUri: thumbnail, duration: video.duration || 0 }],
             location: location || undefined,
           });
         }

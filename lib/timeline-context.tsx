@@ -8,6 +8,7 @@ import {
 } from '@/lib/api';
 import { uploadToAppwrite } from '@/lib/appwrite';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
 export type EntryType = 'text' | 'audio' | 'photo' | 'video' | 'story';
 
@@ -72,18 +73,13 @@ function mapResponseToEntry(r: TimelineEntryResponse): TimelineEntry {
   };
 }
 
-/** Upload a local URI to Appwrite and return the remote URL, or pass through if already remote */
+/** Upload a local URI to Appwrite and return the remote URL. Throws on failure. */
 async function ensureRemoteUri(uri: string): Promise<string> {
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
 
-  try {
-    const remoteUrl = await uploadToAppwrite(uri);
-    console.log('[Timeline] Uploaded to Appwrite:', remoteUrl);
-    return remoteUrl;
-  } catch (err) {
-    console.error('[Timeline] Appwrite upload failed for', uri, err);
-    return uri;
-  }
+  const remoteUrl = await uploadToAppwrite(uri);
+  console.log('[Timeline] Uploaded to Appwrite:', remoteUrl);
+  return remoteUrl;
 }
 
 export function TimelineProvider({ children }: { children: ReactNode }) {
@@ -121,7 +117,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const addEntry = useCallback(async (entry: Omit<TimelineEntry, 'id' | 'createdAt'>): Promise<TimelineEntry | null> => {
     setIsSaving(true);
     try {
-      // 1. Upload any local media files
+      // 1. Upload any local media files — all must succeed
       const uploadedMedia: CreateEntryPayload['media'] = [];
 
       if (entry.media && entry.media.length > 0) {
@@ -157,6 +153,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
       const { data, error } = await createTimelineEntry(payload);
       if (error || !data) {
         console.error('[Timeline] Create error:', error);
+        Alert.alert('Error', 'Failed to save your entry. Please try again.');
         return null;
       }
 
@@ -166,6 +163,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
       return newEntry;
     } catch (err) {
       console.error('[Timeline] addEntry error:', err);
+      Alert.alert('Upload Failed', 'Could not upload media. Entry was not saved.');
       return null;
     } finally {
       setIsSaving(false);

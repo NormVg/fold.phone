@@ -3,6 +3,7 @@
  * Fetches storage config from the backend on first use,
  * then uploads via the official react-native-appwrite SDK.
  */
+import * as FileSystem from 'expo-file-system';
 import { Client, ID, Storage } from 'react-native-appwrite';
 import { apiRequest } from './api';
 
@@ -63,31 +64,60 @@ function guessMimeType(uri: string): string {
 /**
  * Upload a local file directly to Appwrite Storage.
  * Returns the public view URL on success.
+ * Includes retry logic for large files (videos/audio).
  */
 export async function uploadToAppwrite(localUri: string): Promise<string> {
   const { storage, bucketId } = await getStorage();
   const filename = localUri.split('/').pop() || 'file';
   const mimeType = guessMimeType(localUri);
 
-  // The react-native-appwrite SDK accepts a file object for React Native
+  // Get actual file size
+  let fileSize = 0;
+  try {
+    const info = await FileSystem.getInfoAsync(localUri);
+    if (info.exists && 'size' in info) {
+      fileSize = info.size || 0;
+      console.log(`[Appwrite] File: ${filename}, size: ${(fileSize / 1024 / 1024).toFixed(2)} MB, type: ${mimeType}`);
+    }
+  } catch (e) {
+    console.warn('[Appwrite] Could not get file size:', e);
+  }
+
   const file = {
     uri: localUri,
     name: filename,
     type: mimeType,
-    size: 0, // SDK handles this
+    size: fileSize,
   };
 
-  const result = await storage.createFile(
-    bucketId,
-    ID.unique(),
-    file as any,
-  );
+  // Retry logic: up to 3 attempts with exponential backoff
+  const MAX_RETRIES = 2;
+  let lastError: any;
 
-  // Build the public view URL
-  const viewUrl = `${cachedConfig!.endpoint}/storage/buckets/${bucketId}/files/${result.$id}/view?project=${cachedConfig!.projectId}`;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
+        console.log(`[Appwrite] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
 
-  console.log('[Appwrite] File uploaded:', result.$id, viewUrl);
-  return viewUrl;
+      const result = await storage.createFile(
+        bucketId,
+        ID.unique(),
+        file as any,
+      );
+
+      const viewUrl = `${cachedConfig!.endpoint}/storage/buckets/${bucketId}/files/${result.$id}/view?project=${cachedConfig!.projectId}`;
+      console.log('[Appwrite] File uploaded:', result.$id, viewUrl);
+      return viewUrl;
+    } catch (err) {
+      lastError = err;
+      console.warn(`[Appwrite] Upload attempt ${attempt + 1} failed:`, err);
+    }
+  }
+
+  throw lastError;
 }
 
 /** Clear cached config (e.g. on logout) */
