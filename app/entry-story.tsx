@@ -410,7 +410,7 @@ export default function EntryStoryScreen() {
 
       for (const asset of result.assets) {
         const mediaType = asset.type === 'video' ? 'video' : 'image';
-        const err = await validateMediaSize(asset.uri, mediaType as 'image' | 'video');
+        const err = await validateMediaSize(asset.uri, mediaType as 'image' | 'video', asset.fileSize);
         if (err) {
           oversized.push(err);
         } else {
@@ -457,7 +457,7 @@ export default function EntryStoryScreen() {
       const oversized: string[] = [];
 
       for (const asset of result.assets) {
-        const err = await validateMediaSize(asset.uri, 'video');
+        const err = await validateMediaSize(asset.uri, 'video', asset.fileSize);
         if (err) {
           oversized.push(err);
         } else {

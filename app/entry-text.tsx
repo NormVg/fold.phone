@@ -114,7 +114,7 @@ export default function EntryTextScreen() {
       const oversized: string[] = [];
 
       for (const asset of result.assets) {
-        const err = await validateMediaSize(asset.uri, 'image');
+        const err = await validateMediaSize(asset.uri, 'image', asset.fileSize);
         if (err) {
           oversized.push(err);
         } else {
@@ -173,7 +173,7 @@ export default function EntryTextScreen() {
       const asset = result.assets[0];
 
       // Validate file size
-      const sizeError = await validateMediaSize(asset.uri, 'video');
+      const sizeError = await validateMediaSize(asset.uri, 'video', asset.fileSize);
       if (sizeError) {
         Alert.alert('File Too Large', sizeError);
         return;
