@@ -1,16 +1,21 @@
 /**
  * Direct Appwrite upload from the React Native app.
- * Fetches storage config from the backend, then uploads directly
- * to Appwrite REST API — bypasses Vercel's 4.5MB body limit.
+ * Fetches storage config from the backend on first use,
+ * then uploads via the official react-native-appwrite SDK.
  */
+import { Client, ID, Storage } from 'react-native-appwrite';
 import { apiRequest } from './api';
 
-// Cached config so we don't fetch on every upload
+// Cached SDK instances
+let appwriteClient: Client | null = null;
+let appwriteStorage: Storage | null = null;
 let cachedConfig: { endpoint: string; projectId: string; bucketId: string } | null = null;
 
-/** Fetch Appwrite storage config from our backend */
-async function getStorageConfig() {
-  if (cachedConfig) return cachedConfig;
+/** Fetch Appwrite storage config from our backend and initialize SDK */
+async function getStorage(): Promise<{ storage: Storage; bucketId: string }> {
+  if (appwriteStorage && cachedConfig) {
+    return { storage: appwriteStorage, bucketId: cachedConfig.bucketId };
+  }
 
   const { data, error } = await apiRequest<{
     endpoint: string;
@@ -23,17 +28,15 @@ async function getStorageConfig() {
   }
 
   cachedConfig = data;
-  return cachedConfig;
-}
 
-/** Generate a unique ID (same format as Appwrite ID.unique()) */
-function generateUniqueId(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let id = '';
-  for (let i = 0; i < 20; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return id;
+  appwriteClient = new Client()
+    .setEndpoint(data.endpoint)
+    .setProject(data.projectId)
+    .setPlatform('com.taohq.fold');
+
+  appwriteStorage = new Storage(appwriteClient);
+
+  return { storage: appwriteStorage, bucketId: data.bucketId };
 }
 
 /** Guess MIME type from file extension */
@@ -62,42 +65,34 @@ function guessMimeType(uri: string): string {
  * Returns the public view URL on success.
  */
 export async function uploadToAppwrite(localUri: string): Promise<string> {
-  const config = await getStorageConfig();
-  const fileId = generateUniqueId();
+  const { storage, bucketId } = await getStorage();
   const filename = localUri.split('/').pop() || 'file';
   const mimeType = guessMimeType(localUri);
 
-  const formData = new FormData();
-  formData.append('fileId', fileId);
-  formData.append('file', {
+  // The react-native-appwrite SDK accepts a file object for React Native
+  const file = {
     uri: localUri,
     name: filename,
     type: mimeType,
-  } as any);
+    size: 0, // SDK handles this
+  };
 
-  const url = `${config.endpoint}/storage/buckets/${config.bucketId}/files`;
+  const result = await storage.createFile(
+    bucketId,
+    ID.unique(),
+    file as any,
+  );
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-Appwrite-Project': config.projectId,
-    },
-    body: formData,
-  });
+  // Build the public view URL
+  const viewUrl = `${cachedConfig!.endpoint}/storage/buckets/${bucketId}/files/${result.$id}/view?project=${cachedConfig!.projectId}`;
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('[Appwrite] Upload failed:', response.status, errorBody);
-    throw new Error(`Upload failed: ${response.status}`);
-  }
-
-  const result = await response.json();
-
-  // Return the public view URL
-  return `${config.endpoint}/storage/buckets/${config.bucketId}/files/${result.$id}/view?project=${config.projectId}`;
+  console.log('[Appwrite] File uploaded:', result.$id, viewUrl);
+  return viewUrl;
 }
 
 /** Clear cached config (e.g. on logout) */
 export function clearStorageConfig() {
   cachedConfig = null;
+  appwriteClient = null;
+  appwriteStorage = null;
 }
