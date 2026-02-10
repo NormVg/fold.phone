@@ -506,6 +506,11 @@ export default function EntryStoryScreen() {
       return;
     }
 
+    if (!selectedMood) {
+      Alert.alert('Select a mood', 'Please select a mood for your story.');
+      return;
+    }
+
     const hasContent = pages.some(page => page.content.trim().length > 0 || page.media.length > 0);
     if (!hasContent) {
       Alert.alert('Write something', 'Please write at least one page of your story.');

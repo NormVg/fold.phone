@@ -1,6 +1,6 @@
 import { TimelineColors } from '@/constants/theme';
 import { useRouter, type Href } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dimensions,
   Pressable,
@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -151,64 +151,42 @@ function SadIcon({ size = 16 }: { size?: number }) {
 
 // ============== TYPES ==============
 
-interface Story {
-  id: string;
-  title: string;
-  content: string;
-  time: string;
-  date: string;
-  mood: 'HAPPY' | 'SAD' | 'NEUTRAL';
-  wordCount: number;
+import { useTimeline, type TimelineEntry } from '@/lib/timeline-context';
+
+/*
+  Helper to estimate word count from content
+*/
+function getWordCount(content: string): number {
+  return content.trim().split(/\s+/).length;
 }
 
-// ============== MOCK DATA ==============
+// Helper to normalize mood check
+function isHappyMood(mood: string | null | undefined): boolean {
+  if (!mood) return false;
+  const m = mood.toLowerCase();
+  return m.includes('happy') || m === 'normal'; // Count normal as positive/neutral
+}
 
-const MOCK_STORIES: Story[] = [
-  {
-    id: '1',
-    title: 'A Walk Through Memory Lane',
-    content: 'Today I found myself walking through the old neighborhood where I grew up. The streets seemed smaller somehow, the trees much taller than I remembered...',
-    time: '12:30 PM',
-    date: 'Feb 4, 2026',
-    mood: 'HAPPY',
-    wordCount: 342,
-  },
-  {
-    id: '2',
-    title: 'The Storm Within',
-    content: 'Sometimes the hardest battles are the ones we fight inside ourselves. Today was one of those days where everything felt overwhelming...',
-    time: '9:15 PM',
-    date: 'Feb 3, 2026',
-    mood: 'SAD',
-    wordCount: 256,
-  },
-  {
-    id: '3',
-    title: 'Coffee Shop Revelations',
-    content: 'There is something magical about coffee shops. The ambient noise, the aroma of fresh coffee, the strangers around you all lost in their own worlds...',
-    time: '3:45 PM',
-    date: 'Feb 2, 2026',
-    mood: 'HAPPY',
-    wordCount: 428,
-  },
-  {
-    id: '4',
-    title: 'Late Night Thoughts',
-    content: 'The city is quiet at 3 AM. I find myself staring at the ceiling, thoughts racing through my mind like cars on an empty highway...',
-    time: '3:00 AM',
-    date: 'Feb 1, 2026',
-    mood: 'NEUTRAL',
-    wordCount: 189,
-  },
-];
+function isSadMood(mood: string | null | undefined): boolean {
+  if (!mood) return false;
+  const m = mood.toLowerCase();
+  return m.includes('sad');
+}
+
 
 // ============== COMPONENTS ==============
 
-function InsightsCard() {
-  const totalStories = MOCK_STORIES.length;
-  const totalWords = MOCK_STORIES.reduce((acc, s) => acc + s.wordCount, 0);
-  const happyStories = MOCK_STORIES.filter(s => s.mood === 'HAPPY').length;
-  const avgWordsPerStory = Math.round(totalWords / totalStories);
+function InsightsCard({ stories }: { stories: TimelineEntry[] }) {
+  const totalStories = stories.length;
+
+  const totalWords = stories.reduce((acc, s) => {
+    const content = s.storyContent || s.content || '';
+    return acc + getWordCount(content);
+  }, 0);
+
+  const happyStories = stories.filter(s => isHappyMood(s.mood)).length;
+  const avgWordsPerStory = totalStories > 0 ? Math.round(totalWords / totalStories) : 0;
+  const happyPercentage = totalStories > 0 ? Math.round((happyStories / totalStories) * 100) : 0;
 
   return (
     <View style={styles.insightsCard}>
@@ -239,32 +217,41 @@ function InsightsCard() {
       <View style={styles.moodInsight}>
         <HappyIcon size={16 * SCALE} />
         <Text style={styles.moodInsightText}>
-          {Math.round((happyStories / totalStories) * 100)}% of your stories have a positive mood
+          {happyPercentage}% of your stories have a positive mood
         </Text>
       </View>
     </View>
   );
 }
 
-function StoryListItem({ story, onPress }: { story: Story; onPress: () => void }) {
-  const MoodIcon = story.mood === 'HAPPY' ? HappyIcon : story.mood === 'SAD' ? SadIcon : HappyIcon;
-  const readTime = Math.ceil(story.wordCount / 200);
+function StoryListItem({ story, onPress }: { story: TimelineEntry; onPress: () => void }) {
+  const isHappy = isHappyMood(story.mood);
+  const isSad = isSadMood(story.mood);
+  const MoodIcon = isHappy ? HappyIcon : isSad ? SadIcon : HappyIcon; // Default to Happy if unknown
+
+  const content = story.storyContent || story.content || '';
+  const wordCount = getWordCount(content);
+  const readTime = Math.max(1, Math.ceil(wordCount / 200));
+
+  // Format date
+  const dateObj = new Date(story.createdAt);
+  const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <Pressable style={styles.storyItem} onPress={onPress}>
       <View style={styles.storyItemHeader}>
-        <Text style={styles.storyItemTitle} numberOfLines={1}>{story.title}</Text>
+        <Text style={styles.storyItemTitle} numberOfLines={1}>{story.title || 'Untitled Story'}</Text>
         <MoodIcon size={18 * SCALE} />
       </View>
-      
+
       <Text style={styles.storyItemPreview} numberOfLines={2}>
-        {story.content}
+        {content}
       </Text>
-      
+
       <View style={styles.storyItemMeta}>
         <View style={styles.storyMetaItem}>
           <CalendarIcon size={12 * SCALE} />
-          <Text style={styles.storyMetaText}>{story.date}</Text>
+          <Text style={styles.storyMetaText}>{formattedDate}</Text>
         </View>
         <View style={styles.storyMetaItem}>
           <ClockIcon size={12 * SCALE} />
@@ -279,26 +266,25 @@ function StoryListItem({ story, onPress }: { story: Story; onPress: () => void }
 
 export default function StoriesScreen() {
   const router = useRouter();
-  const [stories] = useState<Story[]>(MOCK_STORIES);
+  const { entries } = useTimeline();
+
+  // Filter for story types only
+  const stories = React.useMemo(() => {
+    return entries.filter(e => e.type === 'story');
+  }, [entries]);
 
   const handleBack = () => {
     router.back();
   };
 
   const handleWriteStory = () => {
-    router.push('/write-story' as Href);
+    router.push('/entry-story' as Href);
   };
 
-  const handleStoryPress = (story: Story) => {
+  const handleStoryPress = (story: TimelineEntry) => {
     router.push({
       pathname: '/story/[id]',
-      params: {
-        id: story.id,
-        title: story.title,
-        content: story.content,
-        time: story.time,
-        mood: story.mood,
-      },
+      params: { id: story.id },
     });
   };
 
@@ -326,7 +312,7 @@ export default function StoriesScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Insights Section */}
-        <InsightsCard />
+        <InsightsCard stories={stories} />
 
         {/* Stories List Header */}
         <View style={styles.listHeader}>

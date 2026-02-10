@@ -117,7 +117,7 @@ export default function HubScreen() {
 
         {/* Panel grid with Stories, Emotions, zhare, Media */}
         <HubPanelGrid
-          onStoriesPress={() => console.log('Stories pressed')}
+          onStoriesPress={() => router.push('/stories')}
           onEmotionsPress={() => console.log('Emotions pressed')}
           onSharePress={() => console.log('Share pressed')}
           onMediaPress={() => console.log('Media pressed')}
