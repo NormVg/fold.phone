@@ -353,6 +353,10 @@ export async function uploadMedia(
       type: mimeType,
     } as any);
 
+    // Timeout after 15s to prevent hanging on large files
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch(`${API_BASE}/api/upload`, {
       method: "POST",
       headers: {
@@ -361,7 +365,10 @@ export async function uploadMedia(
       },
       body: formData,
       credentials: "omit",
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const json = await response.json();
 

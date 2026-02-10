@@ -5,6 +5,7 @@ import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -528,6 +529,7 @@ export default function NewMemoryScreen() {
   };
 
   const handleFoldIt = async () => {
+    if (isSaving) return; // debounce
     // Require mood selection
     if (!selectedMood) {
       Alert.alert('Choose a mood', 'Please select how you\'re feeling before folding.');
@@ -563,7 +565,11 @@ export default function NewMemoryScreen() {
       });
 
       console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (err) {
       console.error('Failed to fold:', err);
       Alert.alert('Error', 'Failed to save your entry. Please try again.');
@@ -662,8 +668,12 @@ export default function NewMemoryScreen() {
 
         {/* Fold It Button - rect x=21 y=909 w=350 h=50 rx=25 */}
         <View style={styles.footer}>
-          <Pressable style={styles.foldButton} onPress={handleFoldIt}>
-            <Text style={styles.foldButtonText}>Fold it</Text>
+          <Pressable style={[styles.foldButton, isSaving && { opacity: 0.7 }]} onPress={handleFoldIt} disabled={isSaving}>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.foldButtonText}>Fold it</Text>
+            )}
           </Pressable>
         </View>
       </KeyboardAvoidingView>

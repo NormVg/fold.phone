@@ -3,10 +3,10 @@ import {
   createTimelineEntry,
   deleteTimelineEntry,
   getTimelineEntries,
-  uploadMedia,
   type CreateEntryPayload,
-  type TimelineEntryResponse,
+  type TimelineEntryResponse
 } from '@/lib/api';
+import { uploadToAppwrite } from '@/lib/appwrite';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 export type EntryType = 'text' | 'audio' | 'photo' | 'video' | 'story';
@@ -110,18 +110,20 @@ function guessMimeType(uri: string): string {
   }
 }
 
-/** Upload a local URI and return the remote URL, or pass through if already remote */
+/** Upload a local URI to Appwrite and return the remote URL, or pass through if already remote */
 async function ensureRemoteUri(uri: string): Promise<string> {
   // Already a remote URL — pass through
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
 
-  const { url, error } = await uploadMedia(uri, guessMimeType(uri));
-  if (error || !url) {
-    console.error('[Timeline] Upload failed for', uri, error);
+  try {
+    const remoteUrl = await uploadToAppwrite(uri);
+    console.log('[Timeline] Uploaded to Appwrite:', remoteUrl);
+    return remoteUrl;
+  } catch (err) {
+    console.error('[Timeline] Appwrite upload failed for', uri, err);
     // Fallback: return local URI so the entry still renders locally
     return uri;
   }
-  return url;
 }
 
 export function TimelineProvider({ children }: { children: ReactNode }) {

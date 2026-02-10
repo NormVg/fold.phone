@@ -7,6 +7,7 @@ import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -499,6 +500,7 @@ export default function EntryStoryScreen() {
   };
 
   const handleFoldStory = async () => {
+    if (isSaving) return; // debounce
     if (!storyTitle.trim()) {
       Alert.alert('Add a title', 'Please give your story a title.');
       return;
@@ -535,7 +537,11 @@ export default function EntryStoryScreen() {
       });
 
       // Navigate to timeline
-      router.replace('/');
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (err) {
       console.error('Failed to fold story:', err);
       Alert.alert('Error', 'Failed to save your story. Please try again.');
@@ -751,11 +757,16 @@ export default function EntryStoryScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.foldButton,
-            pressed && styles.foldButtonPressed,
+            (pressed || isSaving) && styles.foldButtonPressed,
           ]}
           onPress={handleFoldStory}
+          disabled={isSaving}
         >
-          <Text style={styles.foldButtonText}>Fold Story</Text>
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.foldButtonText}>Fold Story</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>
