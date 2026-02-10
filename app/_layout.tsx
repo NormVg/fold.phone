@@ -116,7 +116,8 @@ function RootLayoutNav() {
             <Stack.Screen name="about" />
             <Stack.Screen name="story/[id]" />
             <Stack.Screen name="stories" />
-            <Stack.Screen name="write-story" />
+            <Stack.Screen name="media" />
+            <Stack.Screen name="entry-story" />
             <Stack.Screen name="entry-audio" options={{ presentation: 'modal' }} />
             <Stack.Screen name="entry-text" options={{ presentation: 'modal' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />

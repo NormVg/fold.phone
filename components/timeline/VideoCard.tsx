@@ -98,6 +98,67 @@ function ShareIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+// Fullscreen Video Viewer Component
+export function VideoViewer({
+  isVisible,
+  onClose,
+  videoUri,
+  thumbnailUri,
+}: {
+  isVisible: boolean;
+  onClose: () => void;
+  videoUri?: string;
+  thumbnailUri?: string;
+}) {
+  const videoRef = useRef<Video>(null);
+
+  const handleClose = async () => {
+    if (videoRef.current) {
+      await videoRef.current.pauseAsync();
+    }
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={isVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={handleClose}
+    >
+      <View style={styles.modalContainer}>
+        {/* Close button */}
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>✕</Text>
+        </Pressable>
+
+        {/* Video Player */}
+        {videoUri ? (
+          <Video
+            ref={videoRef}
+            source={{ uri: videoUri }}
+            style={styles.fullscreenVideo}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={true}
+          />
+        ) : thumbnailUri ? (
+          <Image
+            source={{ uri: thumbnailUri }}
+            style={styles.fullscreenVideo}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.noVideoContainer}>
+            <VideoIcon size={80} />
+            <Text style={styles.noVideoText}>No video available</Text>
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 export function VideoCard({
   title = 'Video',
   time = '03:34 PM',
@@ -112,17 +173,15 @@ export function VideoCard({
   onMoodPress,
 }: VideoCardProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const videoRef = useRef<Video>(null);
+  // Ref is now internal to the Viewer, but we keep it here if we wanted inline playback later
+  // For now, simpler to let the viewer handle the player ref.
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
 
   const handleOpenFullscreen = () => {
     setIsFullscreen(true);
   };
 
-  const handleCloseFullscreen = async () => {
-    if (videoRef.current) {
-      await videoRef.current.pauseAsync();
-    }
+  const handleCloseFullscreen = () => {
     setIsFullscreen(false);
   };
 
@@ -191,43 +250,13 @@ export function VideoCard({
         </View>
       </View>
 
-      {/* Fullscreen Video Modal */}
-      <Modal
-        visible={isFullscreen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseFullscreen}
-      >
-        <View style={styles.modalContainer}>
-          {/* Close button */}
-          <Pressable style={styles.closeButton} onPress={handleCloseFullscreen}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </Pressable>
-
-          {/* Video Player */}
-          {videoUri ? (
-            <Video
-              ref={videoRef}
-              source={{ uri: videoUri }}
-              style={styles.fullscreenVideo}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={true}
-            />
-          ) : thumbnailUri ? (
-            <Image
-              source={{ uri: thumbnailUri }}
-              style={styles.fullscreenVideo}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.noVideoContainer}>
-              <VideoIcon size={80} />
-              <Text style={styles.noVideoText}>No video available</Text>
-            </View>
-          )}
-        </View>
-      </Modal>
+      {/* Reusable Fullscreen Video Viewer */}
+      <VideoViewer
+        isVisible={isFullscreen}
+        onClose={handleCloseFullscreen}
+        videoUri={videoUri}
+        thumbnailUri={thumbnailUri}
+      />
     </>
   );
 }

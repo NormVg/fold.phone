@@ -120,7 +120,7 @@ export default function HubScreen() {
           onStoriesPress={() => router.push('/stories')}
           onEmotionsPress={() => console.log('Emotions pressed')}
           onSharePress={() => console.log('Share pressed')}
-          onMediaPress={() => console.log('Media pressed')}
+          onMediaPress={() => router.push('/media')}
         />
       </ScrollView>
 

@@ -62,7 +62,7 @@ export default function MainScreen() {
 
   // Horizontal pager state (custom gesture pager)
   const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
-  const panStartX = useSharedValue(translateX.value);
+  const panStartX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
 
   // Date info for headers
   const now = new Date();
@@ -279,7 +279,7 @@ export default function MainScreen() {
                   onStoriesPress={() => router.push('/stories')}
                   onEmotionsPress={() => console.log('Emotions pressed')}
                   onSharePress={() => console.log('Share pressed')}
-                  onMediaPress={() => console.log('Media pressed')}
+                  onMediaPress={() => router.push('/media')}
                 />
               </ScrollView>
             </View>

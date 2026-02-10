@@ -13,6 +13,7 @@ import { Alert } from 'react-native';
 export type EntryType = 'text' | 'audio' | 'photo' | 'video' | 'story';
 
 export interface EntryMedia {
+  id?: string;
   uri: string;
   type: 'image' | 'video' | 'audio';
   thumbnailUri?: string;
@@ -65,6 +66,7 @@ function mapResponseToEntry(r: TimelineEntryResponse): TimelineEntry {
     storyContent: r.storyContent || undefined,
     pageCount: r.pageCount || undefined,
     media: (r.media || []).map(m => ({
+      id: m.id,
       uri: m.uri,
       type: m.type,
       thumbnailUri: m.thumbnailUri || undefined,

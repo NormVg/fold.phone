@@ -83,6 +83,92 @@ function ShareIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+// Fullscreen Photo Viewer Component
+export function PhotoViewer({
+  isVisible,
+  onClose,
+  images,
+  initialIndex = 0,
+}: {
+  isVisible: boolean;
+  onClose: () => void;
+  images: string[];
+  initialIndex?: number;
+}) {
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+
+  // Reset active index when initialIndex changes or modal opens
+  React.useEffect(() => {
+    if (isVisible) {
+      setActiveIndex(initialIndex);
+    }
+  }, [isVisible, initialIndex]);
+
+  const handleFullscreenScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const screenWidth = Dimensions.get('window').width;
+    const index = Math.round(offsetX / screenWidth);
+    setActiveIndex(index);
+  };
+
+  return (
+    <Modal
+      visible={isVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalContainer}>
+        {/* Close button */}
+        <Pressable style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.closeButtonText}>✕</Text>
+        </Pressable>
+
+        {/* Swipeable images */}
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleFullscreenScroll}
+          scrollEventThrottle={16}
+          style={styles.fullscreenScrollView}
+          contentOffset={{ x: initialIndex * SCREEN_WIDTH, y: 0 }} // Initial Scroll Position
+        >
+          {images.map((uri, index) => (
+            <View key={index} style={styles.fullscreenImageContainer}>
+              <Image
+                source={{ uri }}
+                style={styles.fullscreenImage}
+                resizeMode="contain"
+              />
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Dot indicators */}
+        {images.length > 1 && (
+          <View style={styles.fullscreenDotsContainer}>
+            {images.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.fullscreenDot,
+                  index === activeIndex && styles.fullscreenActiveDot
+                ]}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Counter */}
+        <View style={styles.counterContainer}>
+          <Text style={styles.counterText}>{activeIndex + 1} / {images.length}</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function PhotoCard({
   title = 'Photo',
   time = '03:34 PM',
@@ -96,7 +182,7 @@ export function PhotoCard({
   onMoodPress,
 }: PhotoCardProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0); // Keeping for internal logic if needed, though Viewer handles it
   const MoodIcon = mood === 'SAD' ? SadIcon : HappyIcon;
 
   // Combine single imageUri and imageUris array
@@ -111,13 +197,6 @@ export function PhotoCard({
 
   const handleCloseFullscreen = () => {
     setIsFullscreen(false);
-  };
-
-  const handleFullscreenScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const screenWidth = Dimensions.get('window').width;
-    const index = Math.round(offsetX / screenWidth);
-    setActiveIndex(index);
   };
 
   return (
@@ -185,60 +264,13 @@ export function PhotoCard({
         </View>
       </View>
 
-      {/* Fullscreen Modal Gallery */}
-      <Modal
-        visible={isFullscreen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseFullscreen}
-      >
-        <View style={styles.modalContainer}>
-          {/* Close button */}
-          <Pressable style={styles.closeButton} onPress={handleCloseFullscreen}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </Pressable>
-
-          {/* Swipeable images */}
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleFullscreenScroll}
-            scrollEventThrottle={16}
-            style={styles.fullscreenScrollView}
-          >
-            {allImages.map((uri, index) => (
-              <View key={index} style={styles.fullscreenImageContainer}>
-                <Image
-                  source={{ uri }}
-                  style={styles.fullscreenImage}
-                  resizeMode="contain"
-                />
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Dot indicators */}
-          {allImages.length > 1 && (
-            <View style={styles.fullscreenDotsContainer}>
-              {allImages.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.fullscreenDot,
-                    index === activeIndex && styles.fullscreenActiveDot
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Counter */}
-          <View style={styles.counterContainer}>
-            <Text style={styles.counterText}>{activeIndex + 1} / {allImages.length}</Text>
-          </View>
-        </View>
-      </Modal>
+      {/* Reusable Fullscreen Viewer */}
+      <PhotoViewer
+        isVisible={isFullscreen}
+        onClose={handleCloseFullscreen}
+        images={allImages}
+        initialIndex={0}
+      />
     </>
   );
 }
