@@ -5,12 +5,12 @@ import {
   FoldGrid,
   FoldScoreCard,
   PrivateBadge,
-  ActivityLevel as ProfileActivityLevel,
-  ProfileAvatar,
+  ProfileAvatar
 } from '@/components/profile';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
@@ -34,14 +34,7 @@ const PAGE_HUB = 0;
 const PAGE_TIMELINE = 1;
 const PAGE_PROFILE = 2;
 
-// Mock activity data for profile grid
-const MOCK_ACTIVITY_DATA: ProfileActivityLevel[][] = [
-  [1, 3, 1, 1, 3, 1, 1],
-  [3, 2, 2, 2, 3, 2, 3],
-  [1, 2, 1, 2, 1, 1, 1],
-  [2, 3, 1, 1, 3, 3, 3],
-  [1, 0, 0, 0, 0, 0, 0],
-];
+
 
 interface User {
   id: string;
@@ -59,6 +52,9 @@ export default function MainScreen() {
   const { user: authUser } = useAuth();
   const user = authUser as User | null;
   const { entries, isLoading: isTimelineLoading, refreshEntries } = useTimeline();
+
+  // Real profile stats
+  const { streakDays, isStreakActive, audioMinutes, foldScore, percentile, activityData: profileActivityData } = useProfileStats();
 
   // Horizontal pager state (custom gesture pager)
   const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
@@ -488,15 +484,15 @@ export default function MainScreen() {
                 </View>
 
                 <View style={styles.cardSection}>
-                  <FoldScoreCard score={840} percentile={10} progress={0.75} />
+                  <FoldScoreCard score={foldScore} percentile={percentile} progress={0.75} />
                 </View>
 
                 <View style={styles.cardSection}>
-                  <FoldDataCards streakDays={8} isStreakActive={true} audioMinutes={43} />
+                  <FoldDataCards streakDays={streakDays} isStreakActive={isStreakActive} audioMinutes={audioMinutes} />
                 </View>
 
                 <View style={styles.cardSection}>
-                  <FoldGrid activityData={MOCK_ACTIVITY_DATA} />
+                  <FoldGrid activityData={profileActivityData} />
                 </View>
 
                 <View style={styles.cardSection}>
