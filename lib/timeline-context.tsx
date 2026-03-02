@@ -2,8 +2,10 @@ import type { MoodType } from '@/components/mood';
 import {
   createTimelineEntry,
   deleteTimelineEntry,
+  getOnThisDayEntries,
   getTimelineEntries,
   type CreateEntryPayload,
+  type OnThisDayGroup,
   type TimelineEntryResponse
 } from '@/lib/api';
 import { uploadToAppwrite } from '@/lib/appwrite';
@@ -43,6 +45,7 @@ export interface TimelineEntry {
 
 interface TimelineContextValue {
   entries: TimelineEntry[];
+  onThisDayGroups: OnThisDayGroup[];
   isLoading: boolean;
   isSaving: boolean;
   addEntry: (entry: Omit<TimelineEntry, 'id' | 'createdAt'>) => Promise<TimelineEntry | null>;
@@ -90,9 +93,27 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const auth = typeof useAuth === 'function' ? useAuth() : { isAuthenticated: false, user: null };
   const { isAuthenticated, user } = auth;
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [onThisDayGroups, setOnThisDayGroups] = useState<OnThisDayGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const lastUserId = useRef<string | null>(null);
+
+  // Fetch "On This Day" entries from backend
+  const fetchOnThisDay = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+    try {
+      const { data, error } = await getOnThisDayEntries();
+      if (error) {
+        console.error('[Timeline] On-this-day fetch error:', error);
+        return;
+      }
+      if (data) {
+        setOnThisDayGroups(data);
+      }
+    } catch (err) {
+      console.error('[Timeline] On-this-day fetch error:', err);
+    }
+  }, [isAuthenticated, user]);
 
   // Fetch entries from backend on mount
   const refreshEntries = useCallback(async () => {
@@ -128,15 +149,18 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         console.log('[Timeline] User changed:', lastUserId.current, '->', currentUserId);
         lastUserId.current = currentUserId;
         setEntries([]); // Clear stale data from previous user immediately
+        setOnThisDayGroups([]);
         refreshEntries();
+        fetchOnThisDay();
       }
     } else {
       // Logged out — reset everything
       lastUserId.current = null;
       setEntries([]);
+      setOnThisDayGroups([]);
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.id, refreshEntries]);
+  }, [isAuthenticated, user?.id, refreshEntries, fetchOnThisDay]);
 
   const addEntry = useCallback(async (entry: Omit<TimelineEntry, 'id' | 'createdAt'>): Promise<TimelineEntry | null> => {
     setIsSaving(true);
@@ -209,10 +233,11 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
 
   const clearEntries = useCallback(() => {
     setEntries([]);
+    setOnThisDayGroups([]);
   }, []);
 
   return (
-    <TimelineContext.Provider value={{ entries, isLoading, isSaving, addEntry, removeEntry, refreshEntries, clearEntries }}>
+    <TimelineContext.Provider value={{ entries, onThisDayGroups, isLoading, isSaving, addEntry, removeEntry, refreshEntries, clearEntries }}>
       {children}
     </TimelineContext.Provider>
   );

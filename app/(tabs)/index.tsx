@@ -12,6 +12,7 @@ import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
+import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
 import { useHubActivity } from '@/lib/use-hub-activity';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
@@ -52,7 +53,7 @@ export default function MainScreen() {
   const [currentPage, setCurrentPage] = useState(PAGE_TIMELINE); // Start on Timeline (center)
   const { user: authUser } = useAuth();
   const user = authUser as User | null;
-  const { entries, isLoading: isTimelineLoading, refreshEntries } = useTimeline();
+  const { entries, onThisDayGroups, isLoading: isTimelineLoading, refreshEntries } = useTimeline();
 
   // Real profile stats
   const { streakDays, isStreakActive, audioMinutes, foldScore, percentile, activityData: profileActivityData } = useProfileStats();
@@ -203,6 +204,143 @@ export default function MainScreen() {
     };
   });
 
+  // ── Today filter ──────────────────────────────────────────────
+  const todayEntries = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return entries.filter((e) => {
+      const d = new Date(e.createdAt);
+      const entryStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return entryStr === todayStr;
+    });
+  }, [entries]);
+
+  const hasOnThisDay = onThisDayGroups.length > 0;
+  const hasAnything = todayEntries.length > 0 || hasOnThisDay;
+
+  // Helper: render a single card from either TimelineEntry (today) or TimelineEntryResponse (on-this-day)
+  const renderEntryCard = (entry: {
+    id: string;
+    type: string;
+    createdAt: Date | string;
+    mood?: string | null;
+    caption?: string | null;
+    location?: string | null;
+    content?: string | null;
+    title?: string | null;
+    storyContent?: string | null;
+    pageCount?: number | null;
+    media: { id?: string; uri: string; type: string; thumbnailUri?: string | null; duration?: number | null }[];
+  }) => {
+    const time = new Date(entry.createdAt).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    const mood = entry.mood || 'Normal';
+
+    if (entry.type === 'audio') {
+      const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      const audioMedia = entry.media.find(m => m.type === 'audio');
+      return (
+        <VoiceCard
+          title={entry.caption || 'Voice memo'}
+          time={time}
+          duration={formatDuration(audioMedia?.duration || 0)}
+          mood={mood}
+          location={entry.location ?? undefined}
+          isPlaying={playingEntryId === entry.id}
+          progress={playingEntryId === entry.id ? playbackProgress : 0}
+          onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
+          onSharePress={handleSharePress}
+          onLocationPress={handleLocationPress}
+          onMoodPress={handleMoodPress}
+        />
+      );
+    }
+
+    if (entry.type === 'text') {
+      return (
+        <TextCard
+          content={entry.content || ''}
+          time={time}
+          mood={mood}
+          location={entry.location ?? undefined}
+          onSharePress={handleSharePress}
+          onLocationPress={handleLocationPress}
+          onMoodPress={handleMoodPress}
+        />
+      );
+    }
+
+    if (entry.type === 'photo') {
+      const photoUris = entry.media.filter(m => m.type === 'image').map(m => m.uri);
+      return (
+        <PhotoCard
+          title={entry.caption || 'Photo'}
+          time={time}
+          imageUri={photoUris[0]}
+          imageUris={photoUris.length > 1 ? photoUris : undefined}
+          mood={mood}
+          location={entry.location ?? undefined}
+          onSharePress={handleSharePress}
+          onLocationPress={handleLocationPress}
+          onMoodPress={handleMoodPress}
+        />
+      );
+    }
+
+    if (entry.type === 'video') {
+      const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      const videoMedia = entry.media.find(m => m.type === 'video');
+      return (
+        <VideoCard
+          title={entry.caption || 'Video'}
+          time={time}
+          duration={formatDuration(videoMedia?.duration || 0)}
+          thumbnailUri={videoMedia?.thumbnailUri ?? undefined}
+          videoUri={videoMedia?.uri}
+          mood={mood}
+          location={entry.location ?? undefined}
+          onSharePress={handleSharePress}
+          onLocationPress={handleLocationPress}
+          onMoodPress={handleMoodPress}
+        />
+      );
+    }
+
+    if (entry.type === 'story') {
+      const fullContent = entry.storyContent || entry.content || '';
+      const firstPageContent = fullContent.split('\n\n---\n\n')[0];
+      const storyMediaItems = entry.media.filter(m => m.type === 'image' || m.type === 'video');
+      return (
+        <StoryCard
+          id={entry.id}
+          title={entry.title || 'Untitled Story'}
+          content={firstPageContent}
+          time={time}
+          mood={mood}
+          location={entry.location ?? undefined}
+          pageCount={entry.pageCount ?? undefined}
+          storyMedia={storyMediaItems.length > 0 ? storyMediaItems.map(m => ({ uri: m.uri, type: m.type as 'image' | 'video', duration: m.duration ?? undefined })) : undefined}
+          onSharePress={handleSharePress}
+          onLocationPress={handleLocationPress}
+          onMoodPress={handleMoodPress}
+        />
+      );
+    }
+
+    return null;
+  };
+
   const pagerGesture = useMemo(() => {
     const minSwipeDistance = Math.max(70, SCREEN_WIDTH * 0.18);
     const minFlingVelocity = 800;
@@ -286,127 +424,49 @@ export default function MainScreen() {
                   contentContainerStyle={styles.timelineScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  {/* Dynamic entries from context */}
-                  {entries.map((entry) => {
-                    const time = new Date(entry.createdAt).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true,
-                    });
-                    // Pass mood directly - VoiceCard supports all 5 mood types
-                    const mood = entry.mood || 'Normal';
+                  {/* ── Section A: Today's entries ── */}
+                  {todayEntries.map((entry) => (
+                    <View key={entry.id} style={styles.cardWrapper}>
+                      {renderEntryCard(entry)}
+                    </View>
+                  ))}
 
-                    if (entry.type === 'audio') {
-                      const formatDuration = (seconds: number) => {
-                        const mins = Math.floor(seconds / 60);
-                        const secs = seconds % 60;
-                        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                      };
-                      const audioMedia = entry.media.find(m => m.type === 'audio');
-                      return (
-                        <View key={entry.id} style={styles.cardWrapper}>
-                          <VoiceCard
-                            title={entry.caption || 'Voice memo'}
-                            time={time}
-                            duration={formatDuration(audioMedia?.duration || 0)}
-                            mood={mood}
-                            location={entry.location}
-                            isPlaying={playingEntryId === entry.id}
-                            progress={playingEntryId === entry.id ? playbackProgress : 0}
-                            onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
-                            onSharePress={handleSharePress}
-                            onLocationPress={handleLocationPress}
-                            onMoodPress={handleMoodPress}
-                          />
+                  {/* ── Section B: "ON THIS DAY" divider ── */}
+                  {hasOnThisDay && (
+                    <View style={styles.onThisDayDivider}>
+                      <View style={styles.dividerLine} />
+                      <View style={styles.dividerPill}>
+                        <Text style={styles.dividerPillText}>ON THIS DAY</Text>
+                      </View>
+                      <View style={styles.dividerLine} />
+                    </View>
+                  )}
+
+                  {/* ── Section C: Past year groups ── */}
+                  {onThisDayGroups.map((group) => (
+                    <View key={group.year}>
+                      {/* Year label pill on the timeline line */}
+                      <View style={styles.yearLabelRow}>
+                        <View style={styles.yearPill}>
+                          <Text style={styles.yearPillText}>{group.year}</Text>
                         </View>
-                      );
-                    }
-
-                    if (entry.type === 'text') {
-                      return (
-                        <View key={entry.id} style={styles.cardWrapper}>
-                          <TextCard
-                            content={entry.content || ''}
-                            time={time}
-                            mood={mood}
-                            location={entry.location}
-                            onSharePress={handleSharePress}
-                            onLocationPress={handleLocationPress}
-                            onMoodPress={handleMoodPress}
-                          />
+                      </View>
+                      {group.entries.map((entry: TimelineEntryResponse) => (
+                        <View key={entry.id} style={[styles.cardWrapper, { opacity: 0.85 }]}>
+                          {renderEntryCard({
+                            ...entry,
+                            media: (entry.media || []).map((m) => ({
+                              id: m.id,
+                              uri: m.uri,
+                              type: m.type,
+                              thumbnailUri: m.thumbnailUri,
+                              duration: m.duration,
+                            })),
+                          })}
                         </View>
-                      );
-                    }
-
-                    if (entry.type === 'photo') {
-                      const photoUris = entry.media.filter(m => m.type === 'image').map(m => m.uri);
-                      return (
-                        <View key={entry.id} style={styles.cardWrapper}>
-                          <PhotoCard
-                            title={entry.caption || 'Photo'}
-                            time={time}
-                            imageUri={photoUris[0]}
-                            imageUris={photoUris.length > 1 ? photoUris : undefined}
-                            mood={mood}
-                            location={entry.location}
-                            onSharePress={handleSharePress}
-                            onLocationPress={handleLocationPress}
-                            onMoodPress={handleMoodPress}
-                          />
-                        </View>
-                      );
-                    }
-
-                    if (entry.type === 'video') {
-                      const formatDuration = (seconds: number) => {
-                        const mins = Math.floor(seconds / 60);
-                        const secs = seconds % 60;
-                        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                      };
-                      const videoMedia = entry.media.find(m => m.type === 'video');
-                      return (
-                        <View key={entry.id} style={styles.cardWrapper}>
-                          <VideoCard
-                            title={entry.caption || 'Video'}
-                            time={time}
-                            duration={formatDuration(videoMedia?.duration || 0)}
-                            thumbnailUri={videoMedia?.thumbnailUri}
-                            videoUri={videoMedia?.uri}
-                            mood={mood}
-                            location={entry.location}
-                            onSharePress={handleSharePress}
-                            onLocationPress={handleLocationPress}
-                            onMoodPress={handleMoodPress}
-                          />
-                        </View>
-                      );
-                    }
-
-                    if (entry.type === 'story') {
-                      const fullContent = entry.storyContent || entry.content || '';
-                      const firstPageContent = fullContent.split('\n\n---\n\n')[0];
-                      const storyMediaItems = entry.media.filter(m => m.type === 'image' || m.type === 'video');
-                      return (
-                        <View key={entry.id} style={styles.cardWrapper}>
-                          <StoryCard
-                            id={entry.id}
-                            title={entry.title || 'Untitled Story'}
-                            content={firstPageContent}
-                            time={time}
-                            mood={mood}
-                            location={entry.location}
-                            pageCount={entry.pageCount}
-                            storyMedia={storyMediaItems.length > 0 ? storyMediaItems.map(m => ({ uri: m.uri, type: m.type as 'image' | 'video', duration: m.duration })) : undefined}
-                            onSharePress={handleSharePress}
-                            onLocationPress={handleLocationPress}
-                            onMoodPress={handleMoodPress}
-                          />
-                        </View>
-                      );
-                    }
-
-                    return null;
-                  })}
+                      ))}
+                    </View>
+                  ))}
 
                   {/* Loading indicator */}
                   {isTimelineLoading && entries.length === 0 && (
@@ -416,27 +476,24 @@ export default function MainScreen() {
                     </View>
                   )}
 
-                  {/* Empty state card */}
-                  {!isTimelineLoading && entries.length === 0 && (
+                  {/* ── Section D: Beautiful empty state ── */}
+                  {!isTimelineLoading && !hasAnything && (
                     <View style={styles.cardWrapper}>
                       <View style={styles.emptyStateCard}>
-                        <View style={styles.emptyTopSection}>
-                          <View style={styles.emptyIconCircle}>
-                            <Svg width={16 * SCALE} height={16 * SCALE} viewBox="0 0 24 24" fill="none">
-                              <Path
-                                d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76zM17 3l4 4"
-                                stroke={TimelineColors.primary}
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </Svg>
-                          </View>
-                          <View style={styles.emptyBadge}>
-                            <Text style={styles.emptyBadgeText}>Start here</Text>
-                          </View>
+                        <View style={styles.emptyIconCircle}>
+                          <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
+                            <Path
+                              d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76zM17 3l4 4"
+                              stroke={TimelineColors.primary}
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </Svg>
                         </View>
-                        <Text style={styles.emptyContent}>Capture your first memory by tapping below</Text>
+                        <Text style={styles.emptyTitle}>Your story starts here</Text>
+                        <Text style={styles.emptySubtitle}>Tap below to capture your first memory</Text>
+                        <View style={styles.emptyAccentStrip} />
                       </View>
                     </View>
                   )}
@@ -676,42 +733,88 @@ const styles = StyleSheet.create({
     width: 340 * SCALE,
     backgroundColor: '#FDFBF7',
     borderRadius: 16 * SCALE,
-    padding: 14 * SCALE,
+    padding: 24 * SCALE,
+    alignItems: 'center' as const,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
-  },
-  emptyTopSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12 * SCALE,
+    overflow: 'hidden' as const,
   },
   emptyIconCircle: {
-    width: 32 * SCALE,
-    height: 32 * SCALE,
-    borderRadius: 16 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10 * SCALE,
+    width: 48 * SCALE,
+    height: 48 * SCALE,
+    borderRadius: 24 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.12)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 16 * SCALE,
   },
-  emptyBadge: {
-    backgroundColor: 'rgba(129, 1, 0, 0.1)',
-    paddingHorizontal: 10 * SCALE,
-    paddingVertical: 4 * SCALE,
-    borderRadius: 8 * SCALE,
-  },
-  emptyBadgeText: {
-    fontSize: 12 * SCALE,
-    fontWeight: '600',
+  emptyTitle: {
+    fontFamily: 'SignPainter',
+    fontSize: 26 * SCALE,
     color: TimelineColors.primary,
+    textAlign: 'center' as const,
+    marginBottom: 6 * SCALE,
   },
-  emptyContent: {
-    fontSize: 15 * SCALE,
-    fontWeight: '400',
-    color: 'rgba(0, 0, 0, 0.5)',
-    lineHeight: 22 * SCALE,
+  emptySubtitle: {
+    fontSize: 14 * SCALE,
+    fontWeight: '400' as const,
+    color: '#8A8780',
+    textAlign: 'center' as const,
+    lineHeight: 20 * SCALE,
+    marginBottom: 18 * SCALE,
+  },
+  emptyAccentStrip: {
+    width: 60 * SCALE,
+    height: 3 * SCALE,
+    borderRadius: 1.5 * SCALE,
+    backgroundColor: TimelineColors.primary,
+  },
+  // On This Day divider
+  onThisDayDivider: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    width: 340 * SCALE,
+    marginTop: 12 * SCALE,
+    marginBottom: 8 * SCALE,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: TimelineColors.primary,
+    opacity: 0.35,
+  },
+  dividerPill: {
+    backgroundColor: TimelineColors.primary,
+    paddingHorizontal: 14 * SCALE,
+    paddingVertical: 5 * SCALE,
+    borderRadius: 12 * SCALE,
+    marginHorizontal: 10 * SCALE,
+  },
+  dividerPillText: {
+    fontSize: 11 * SCALE,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+    letterSpacing: 1.2,
+  },
+  // Year label pills
+  yearLabelRow: {
+    alignItems: 'center' as const,
+    marginTop: 6 * SCALE,
+    marginBottom: 2 * SCALE,
+  },
+  yearPill: {
+    backgroundColor: TimelineColors.primary,
+    paddingHorizontal: 14 * SCALE,
+    paddingVertical: 4 * SCALE,
+    borderRadius: 10 * SCALE,
+  },
+  yearPillText: {
+    fontSize: 12 * SCALE,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });

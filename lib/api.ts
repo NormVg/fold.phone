@@ -310,6 +310,31 @@ export async function updateTimelineEntry(
 }
 
 /**
+ * "On This Day" — entries from previous years matching today's month+day
+ */
+export interface OnThisDayGroup {
+  year: number;
+  entries: TimelineEntryResponse[];
+}
+
+export async function getOnThisDayEntries(): Promise<{
+  data: OnThisDayGroup[] | null;
+  error: string | null;
+}> {
+  const result = await apiRequest<OnThisDayGroup[]>("/api/timeline/on-this-day");
+
+  if (result.error) return { data: null, error: result.error };
+
+  // apiRequest unwraps json.data ?? json — result.data may be the array directly
+  // or a wrapper object with a nested .data property
+  const groups = Array.isArray(result.data)
+    ? result.data
+    : (result.data as any)?.data ?? [];
+
+  return { data: groups, error: null };
+}
+
+/**
  * Delete a timeline entry
  */
 export async function deleteTimelineEntry(
