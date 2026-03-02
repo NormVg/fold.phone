@@ -399,7 +399,10 @@ export default function MainScreen() {
                   activityData={activityData}
                   onPrevMonth={handlePrevMonth}
                   onNextMonth={handleNextMonth}
-                  onDayPress={(day) => console.log('Day pressed:', day)}
+                    onDayPress={(day) => {
+                      const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      router.push({ pathname: '/day-view', params: { date: dateStr } });
+                    }}
                 />
                 <HubPanelGrid
                   onStoriesPress={() => router.push('/stories')}

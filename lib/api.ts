@@ -335,6 +335,25 @@ export async function getOnThisDayEntries(): Promise<{
 }
 
 /**
+ * Get timeline entries for a specific calendar date (YYYY-MM-DD)
+ */
+export async function getTimelineEntriesByDate(
+  date: string
+): Promise<{ data: TimelineEntryResponse[] | null; error: string | null }> {
+  const result = await apiRequest<TimelineEntryResponse[]>(
+    `/api/timeline/by-date?date=${encodeURIComponent(date)}`
+  );
+
+  if (result.error) return { data: null, error: result.error };
+
+  const entries = Array.isArray(result.data)
+    ? result.data
+    : (result.data as any)?.data ?? [];
+
+  return { data: entries, error: null };
+}
+
+/**
  * Delete a timeline entry
  */
 export async function deleteTimelineEntry(
