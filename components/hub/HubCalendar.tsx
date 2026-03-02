@@ -1,5 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+} from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -108,7 +114,21 @@ export function HubCalendar({
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
   const currentDay = isCurrentMonth ? today.getDate() : -1;
 
-  // Calculate calendar grid
+  // Track swipe direction for animation: 'left' = going forward, 'right' = going back
+  const [direction, setDirection] = useState<'left' | 'right'>('left');
+  const gridKey = `${year}-${month}`;
+
+  const handlePrev = useCallback(() => {
+    setDirection('right');
+    onPrevMonth?.();
+  }, [onPrevMonth]);
+
+  const handleNext = useCallback(() => {
+    setDirection('left');
+    onNextMonth?.();
+  }, [onNextMonth]);
+
+  // Calculate calendar grid — always 6 weeks for stable height
   const calendarWeeks = useMemo(() => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
@@ -148,6 +168,11 @@ export function HubCalendar({
       weeks.push(currentWeek);
     }
 
+    // Always pad to exactly 6 weeks for stable height
+    while (weeks.length < 6) {
+      weeks.push([null, null, null, null, null, null, null]);
+    }
+
     return weeks;
   }, [year, month, activityData]);
 
@@ -158,7 +183,7 @@ export function HubCalendar({
       {/* Month navigation header - floating above card */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={onPrevMonth}
+          onPress={handlePrev}
           style={styles.chevronButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -168,7 +193,7 @@ export function HubCalendar({
         <Text style={styles.monthText}>{monthYear}</Text>
 
         <TouchableOpacity
-          onPress={onNextMonth}
+          onPress={handleNext}
           style={styles.chevronButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -178,7 +203,7 @@ export function HubCalendar({
 
       {/* Main card body */}
       <View style={styles.card}>
-        {/* Day labels */}
+        {/* Day labels (static — don't animate) */}
         <View style={styles.dayLabels}>
           {DAYS.map((day, index) => (
             <View key={`day-${index}`} style={styles.dayLabelCell}>
@@ -187,8 +212,14 @@ export function HubCalendar({
           ))}
         </View>
 
-        {/* Calendar grid */}
-        <View style={styles.grid}>
+        {/* Calendar grid — animated on month change */}
+        <View style={styles.gridClip}>
+          <Animated.View
+            key={gridKey}
+            entering={direction === 'left' ? SlideInRight.duration(200) : SlideInLeft.duration(200)}
+            exiting={direction === 'left' ? SlideOutLeft.duration(150) : SlideOutRight.duration(150)}
+            style={styles.grid}
+          >
           {calendarWeeks.map((week, weekIndex) => (
             <View key={`week-${weekIndex}`} style={styles.week}>
               {week.map((dayData, dayIndex) => {
@@ -225,6 +256,7 @@ export function HubCalendar({
               })}
             </View>
           ))}
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -334,6 +366,9 @@ const styles = StyleSheet.create({
   grid: {
     paddingHorizontal: HORIZONTAL_PADDING,
     marginTop: 12 * SCALE,
+  },
+  gridClip: {
+    overflow: 'hidden',
   },
   week: {
     flexDirection: 'row',

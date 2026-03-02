@@ -91,7 +91,7 @@ export default function ProfileScreen() {
   };
 
   const handleFoldersPress = () => {
-    console.log('Folders pressed');
+    router.push('/media');
   };
 
   return (

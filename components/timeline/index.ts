@@ -5,3 +5,4 @@ export { PhotoCard } from './PhotoCard';
 export { TextCard } from './TextCard';
 export { VideoCard } from './VideoCard';
 export { StoryCard } from './StoryCard';
+export { TimelineSkeletonLoader } from './TimelineSkeletonLoader';

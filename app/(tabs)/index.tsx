@@ -7,7 +7,7 @@ import {
   PrivateBadge,
   ProfileAvatar
 } from '@/components/profile';
-import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, VideoCard, VoiceCard } from '@/components/timeline';
+import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProfileStats } from '@/lib/profile-hooks';
@@ -17,7 +17,7 @@ import { useHubActivity } from '@/lib/use-hub-activity';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -124,7 +124,7 @@ export default function MainScreen() {
   };
 
   const handleSettingsPress = () => router.push('/settings');
-  const handleFoldersPress = () => console.log('Folders pressed');
+  const handleFoldersPress = () => router.push('/media');
 
   // Timeline handlers
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -406,7 +406,7 @@ export default function MainScreen() {
                 />
                 <HubPanelGrid
                   onStoriesPress={() => router.push('/stories')}
-                  onEmotionsPress={() => console.log('Emotions pressed')}
+                  onEmotionsPress={() => router.push('/emotions')}
                   onSharePress={() => console.log('Share pressed')}
                   onMediaPress={() => router.push('/media')}
                 />
@@ -471,12 +471,9 @@ export default function MainScreen() {
                     </View>
                   ))}
 
-                  {/* Loading indicator */}
+                  {/* Loading skeleton */}
                   {isTimelineLoading && entries.length === 0 && (
-                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                      <ActivityIndicator size="small" color={TimelineColors.primary} />
-                      <Text style={{ color: '#8A8780', fontSize: 13, marginTop: 8 }}>Loading memories...</Text>
-                    </View>
+                    <TimelineSkeletonLoader />
                   )}
 
                   {/* ── Section D: Beautiful empty state ── */}
@@ -736,14 +733,16 @@ const styles = StyleSheet.create({
     width: 340 * SCALE,
     backgroundColor: '#FDFBF7',
     borderRadius: 16 * SCALE,
-    padding: 24 * SCALE,
+    padding: 28 * SCALE,
     alignItems: 'center' as const,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     elevation: 4,
     overflow: 'hidden' as const,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
   },
   emptyIconCircle: {
     width: 48 * SCALE,

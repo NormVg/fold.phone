@@ -328,7 +328,7 @@ export default function DayViewScreen() {
 
           {/* Empty state */}
           {!isLoading && entries.length === 0 && (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyCard}>
               <View style={styles.emptyIconCircle}>
                 <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -346,6 +346,7 @@ export default function DayViewScreen() {
                   ? 'Start capturing memories by tapping the center button'
                   : 'No memories were captured on this date'}
               </Text>
+              <View style={styles.emptyAccentStrip} />
             </View>
           )}
         </ScrollView>
@@ -445,32 +446,51 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   // Empty state
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 40,
+  emptyCard: {
+    alignSelf: 'center',
+    width: 340 * SCALE,
+    backgroundColor: '#FDFBF7',
+    borderRadius: 16 * SCALE,
+    padding: 28 * SCALE,
+    alignItems: 'center' as const,
+    marginTop: 40 * SCALE,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden' as const,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
   },
   emptyIconCircle: {
-    width: 56 * SCALE,
-    height: 56 * SCALE,
-    borderRadius: 28 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 48 * SCALE,
+    height: 48 * SCALE,
+    borderRadius: 24 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.12)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginBottom: 16 * SCALE,
   },
   emptyTitle: {
     fontFamily: 'SignPainter',
-    fontSize: 24 * SCALE,
+    fontSize: 26 * SCALE,
     color: TimelineColors.primary,
-    textAlign: 'center',
+    textAlign: 'center' as const,
     marginBottom: 6 * SCALE,
   },
   emptySubtitle: {
     fontSize: 14 * SCALE,
-    fontWeight: '400',
+    fontWeight: '400' as const,
     color: '#8A8780',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     lineHeight: 20 * SCALE,
+    marginBottom: 18 * SCALE,
+  },
+  emptyAccentStrip: {
+    width: 60 * SCALE,
+    height: 3 * SCALE,
+    borderRadius: 1.5 * SCALE,
+    backgroundColor: TimelineColors.primary,
   },
 });
