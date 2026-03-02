@@ -107,7 +107,7 @@ export default function HubScreen() {
         <HubPanelGrid
           onStoriesPress={() => router.push('/stories')}
           onEmotionsPress={() => router.push('/emotions')}
-          onSharePress={() => console.log('Share pressed')}
+          onSharePress={() => router.push('/shares')}
           onMediaPress={() => router.push('/media')}
         />
       </ScrollView>

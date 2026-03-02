@@ -368,6 +368,93 @@ export async function deleteTimelineEntry(
   };
 }
 
+// =============================================================================
+// Shares API
+// =============================================================================
+
+export interface ShareResponse {
+  id: string;
+  entryId: string;
+  userId: string;
+  token: string;
+  status: "active" | "paused";
+  viewCount: number;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Joined entry preview fields (from GET /api/shares list)
+  entryType?: string;
+  entryMood?: string | null;
+  entryCaption?: string | null;
+  entryContent?: string | null;
+  entryTitle?: string | null;
+  entryCreatedAt?: string;
+}
+
+const SHARE_BASE_URL = "https://backend.fold.taohq.org/api/shares/public";
+
+/**
+ * Create a share link for an entry. Returns existing share if one already exists.
+ */
+export async function createShare(
+  entryId: string
+): Promise<{ data: ShareResponse | null; error: string | null }> {
+  return apiRequest<ShareResponse>("/api/shares", {
+    method: "POST",
+    body: JSON.stringify({ entryId }),
+  });
+}
+
+/**
+ * Get all shares for the current user (with entry preview data)
+ */
+export async function getShares(): Promise<{
+  data: ShareResponse[] | null;
+  error: string | null;
+}> {
+  const result = await apiRequest<ShareResponse[]>("/api/shares");
+  if (result.error) return { data: null, error: result.error };
+  const shares = Array.isArray(result.data)
+    ? result.data
+    : (result.data as any)?.data ?? [];
+  return { data: shares, error: null };
+}
+
+/**
+ * Update share status (active/paused)
+ */
+export async function updateShare(
+  id: string,
+  status: "active" | "paused"
+): Promise<{ data: ShareResponse | null; error: string | null }> {
+  return apiRequest<ShareResponse>(`/api/shares/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Delete a share permanently
+ */
+export async function deleteShare(
+  id: string
+): Promise<{ success: boolean; error: string | null }> {
+  const result = await apiRequest<{ message: string }>(`/api/shares/${id}`, {
+    method: "DELETE",
+  });
+  return {
+    success: result.error === null,
+    error: result.error,
+  };
+}
+
+/**
+ * Get the public share URL for a given token
+ */
+export function getShareUrl(token: string): string {
+  return `${SHARE_BASE_URL}/${token}`;
+}
+
 /**
  * Upload a media file (photo, video, audio). Returns the remote URL.
  */

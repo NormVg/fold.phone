@@ -193,7 +193,22 @@ export default function MainScreen() {
   };
 
   const handlePlayPress = () => console.log('Play pressed');
-  const handleSharePress = () => console.log('Share pressed');
+  const handleSharePress = async (entryId?: string) => {
+    if (!entryId) return;
+    try {
+      const { createShare, getShareUrl } = await import('@/lib/api');
+      const Clipboard = await import('expo-clipboard');
+      const result = await createShare(entryId);
+      if (result.data) {
+        const url = getShareUrl(result.data.token);
+        await Clipboard.setStringAsync(url);
+        const { Alert } = await import('react-native');
+        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
+      }
+    } catch (e) {
+      console.error('Share error:', e);
+    }
+  };
   const handleLocationPress = () => console.log('Location pressed');
   const handleMoodPress = () => console.log('Mood pressed');
   const handleImagePress = () => console.log('Image pressed');
@@ -256,7 +271,7 @@ export default function MainScreen() {
           isPlaying={playingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -270,7 +285,7 @@ export default function MainScreen() {
           time={time}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -287,7 +302,7 @@ export default function MainScreen() {
           imageUris={photoUris.length > 1 ? photoUris : undefined}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -310,7 +325,7 @@ export default function MainScreen() {
           videoUri={videoMedia?.uri}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -331,7 +346,7 @@ export default function MainScreen() {
           location={entry.location ?? undefined}
           pageCount={entry.pageCount ?? undefined}
           storyMedia={storyMediaItems.length > 0 ? storyMediaItems.map(m => ({ uri: m.uri, type: m.type as 'image' | 'video', duration: m.duration ?? undefined })) : undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -407,7 +422,7 @@ export default function MainScreen() {
                 <HubPanelGrid
                   onStoriesPress={() => router.push('/stories')}
                   onEmotionsPress={() => router.push('/emotions')}
-                  onSharePress={() => console.log('Share pressed')}
+                  onSharePress={() => router.push('/shares')}
                   onMediaPress={() => router.push('/media')}
                 />
               </ScrollView>

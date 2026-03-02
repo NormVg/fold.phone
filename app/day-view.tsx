@@ -145,7 +145,22 @@ export default function DayViewScreen() {
     }
   };
 
-  const handleSharePress = () => {};
+  const handleSharePress = async (entryId?: string) => {
+    if (!entryId) return;
+    try {
+      const { createShare, getShareUrl } = await import('@/lib/api');
+      const Clipboard = await import('expo-clipboard');
+      const result = await createShare(entryId);
+      if (result.data) {
+        const url = getShareUrl(result.data.token);
+        await Clipboard.setStringAsync(url);
+        const { Alert } = await import('react-native');
+        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
+      }
+    } catch (e) {
+      console.error('Share error:', e);
+    }
+  };
   const handleLocationPress = () => {};
   const handleMoodPress = () => {};
 
@@ -174,7 +189,7 @@ export default function DayViewScreen() {
           isPlaying={playingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -188,7 +203,7 @@ export default function DayViewScreen() {
           time={time}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -205,7 +220,7 @@ export default function DayViewScreen() {
           imageUris={photoUris.length > 1 ? photoUris : undefined}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -228,7 +243,7 @@ export default function DayViewScreen() {
           videoUri={videoMedia?.uri}
           mood={mood}
           location={entry.location ?? undefined}
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />
@@ -257,7 +272,7 @@ export default function DayViewScreen() {
                 }))
               : undefined
           }
-          onSharePress={handleSharePress}
+          onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
         />

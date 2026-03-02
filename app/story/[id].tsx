@@ -213,8 +213,20 @@ export default function StoryScreen() {
     }
   };
 
-  const handleShare = () => {
-    console.log('Share story');
+  const handleShare = async () => {
+    try {
+      const { createShare, getShareUrl } = await import('@/lib/api');
+      const Clipboard = await import('expo-clipboard');
+      const { Alert } = await import('react-native');
+      const result = await createShare(id as string);
+      if (result.data) {
+        const url = getShareUrl(result.data.token);
+        await Clipboard.setStringAsync(url);
+        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
+      }
+    } catch (e) {
+      console.error('Share error:', e);
+    }
   };
 
   return (
