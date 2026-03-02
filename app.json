@@ -2,14 +2,18 @@
   "expo": {
     "name": "Fold",
     "slug": "fold",
-    "version": "1.0.0",
+    "version": "1.0.0-beta",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fold",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.taohq.fold",
+      "associatedDomains": [
+        "applinks:link.fold.taohq.org"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +23,24 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.taohq.fold"
+      "package": "com.taohq.fold",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "link.fold.taohq.org",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static",

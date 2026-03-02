@@ -7,6 +7,7 @@ import {
   PrivateBadge,
   ProfileAvatar
 } from '@/components/profile';
+import { ShareLoadingOverlay } from '@/components/shares';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
@@ -14,6 +15,7 @@ import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
 import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
 import { useHubActivity } from '@/lib/use-hub-activity';
+import { useShareEntry } from '@/lib/use-share-entry';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -74,6 +76,7 @@ export default function MainScreen() {
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
 
   const activityData = useHubActivity(calendarYear, calendarMonth);
+  const { shareEntry, sharingEntryId } = useShareEntry();
 
   const navigateToPage = useCallback((page: number) => {
     const clamped = Math.max(PAGE_HUB, Math.min(PAGE_PROFILE, page));
@@ -193,22 +196,7 @@ export default function MainScreen() {
   };
 
   const handlePlayPress = () => console.log('Play pressed');
-  const handleSharePress = async (entryId?: string) => {
-    if (!entryId) return;
-    try {
-      const { createShare, getShareUrl } = await import('@/lib/api');
-      const Clipboard = await import('expo-clipboard');
-      const result = await createShare(entryId);
-      if (result.data) {
-        const url = getShareUrl(result.data.token);
-        await Clipboard.setStringAsync(url);
-        const { Alert } = await import('react-native');
-        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
-      }
-    } catch (e) {
-      console.error('Share error:', e);
-    }
-  };
+  const handleSharePress = (entryId?: string) => shareEntry(entryId);
   const handleLocationPress = () => console.log('Location pressed');
   const handleMoodPress = () => console.log('Mood pressed');
   const handleImagePress = () => console.log('Image pressed');
@@ -576,6 +564,9 @@ export default function MainScreen() {
           </Animated.View>
         </View>
       </GestureDetector>
+
+      {/* Share loading overlay */}
+      <ShareLoadingOverlay visible={!!sharingEntryId} />
 
       {/* Bottom navigation bar - synced with pager */}
       <BottomNavBar

@@ -3,7 +3,7 @@ import { Dimensions } from 'react-native';
 export const SCREEN_WIDTH = Dimensions.get('window').width;
 export const SCALE = SCREEN_WIDTH / 393;
 
-export const SHARE_BASE_URL = 'https://backend.fold.taohq.org/api/shares/public';
+export const SHARE_BASE_URL = 'https://link.fold.taohq.org';
 
 export const ENTRY_TYPE_LABELS: Record<string, string> = {
   text: 'Text Entry',

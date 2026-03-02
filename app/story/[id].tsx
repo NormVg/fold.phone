@@ -1,9 +1,12 @@
+import { ShareLoadingOverlay } from '@/components/shares';
+import { useShareEntry } from '@/lib/use-share-entry';
 import { useTimeline } from '@/lib/timeline-context';
 import { ResizeMode, Video } from 'expo-av';
 import { Image as ExpoImage } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Modal,
@@ -213,21 +216,8 @@ export default function StoryScreen() {
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const { createShare, getShareUrl } = await import('@/lib/api');
-      const Clipboard = await import('expo-clipboard');
-      const { Alert } = await import('react-native');
-      const result = await createShare(id as string);
-      if (result.data) {
-        const url = getShareUrl(result.data.token);
-        await Clipboard.setStringAsync(url);
-        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
-      }
-    } catch (e) {
-      console.error('Share error:', e);
-    }
-  };
+  const { shareEntry, sharingEntryId } = useShareEntry();
+  const handleShare = () => shareEntry(id);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -242,8 +232,12 @@ export default function StoryScreen() {
           </View>
           <Text style={styles.headerTitle}>Story</Text>
         </View>
-        <Pressable onPress={handleShare} style={styles.shareButton}>
-          <ShareIcon size={20 * SCALE} />
+        <Pressable onPress={handleShare} style={styles.shareButton} disabled={!!sharingEntryId}>
+          {sharingEntryId ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <ShareIcon size={20 * SCALE} />
+          )}
         </Pressable>
       </View>
 
@@ -395,6 +389,8 @@ export default function StoryScreen() {
           </View>
         </Modal>
       )}
+      {/* Share loading overlay */}
+      <ShareLoadingOverlay visible={!!sharingEntryId} />
     </SafeAreaView>
   );
 }

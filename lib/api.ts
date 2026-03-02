@@ -391,7 +391,7 @@ export interface ShareResponse {
   entryCreatedAt?: string;
 }
 
-const SHARE_BASE_URL = "https://backend.fold.taohq.org/api/shares/public";
+const SHARE_BASE_URL = "https://link.fold.taohq.org";
 
 /**
  * Create a share link for an entry. Returns existing share if one already exists.
@@ -453,6 +453,51 @@ export async function deleteShare(
  */
 export function getShareUrl(token: string): string {
   return `${SHARE_BASE_URL}/${token}`;
+}
+
+/**
+ * Public share entry response from the public endpoint
+ */
+export interface PublicShareEntry {
+  entry: {
+    type: string;
+    mood: string | null;
+    caption: string | null;
+    content: string | null;
+    title: string | null;
+    storyContent: string | null;
+    pageCount: number | null;
+    createdAt: string;
+    media: Array<{
+      id: string;
+      uri: string;
+      type: string;
+      thumbnailUri: string | null;
+      duration: number | null;
+      sortOrder: number;
+    }>;
+  };
+  sharedAt: string;
+  viewCount: number;
+}
+
+/**
+ * Fetch a publicly shared entry by token (no auth required).
+ * Uses the backend API endpoint directly.
+ */
+export async function getPublicShare(
+  token: string
+): Promise<{ data: PublicShareEntry | null; error: string | null }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/shares/public/${token}`);
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { data: null, error: json.error || "Failed to load shared entry" };
+    }
+    return { data: json.data, error: null };
+  } catch (e) {
+    return { data: null, error: "Network error" };
+  }
 }
 
 /**

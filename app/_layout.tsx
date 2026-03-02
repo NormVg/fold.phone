@@ -13,6 +13,7 @@ import 'react-native-url-polyfill/auto';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { BiometricLockProvider } from '@/lib/biometric-lock';
 import { TimelineProvider } from '@/lib/timeline-context';
 
 // Keep the splash screen visible while we fetch resources
@@ -136,8 +137,17 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <TimelineProvider>
-        <RootLayoutNav />
+        <RootLayoutWithLock />
       </TimelineProvider>
     </AuthProvider>
+  );
+}
+
+function RootLayoutWithLock() {
+  const { isAuthenticated } = useAuth();
+  return (
+    <BiometricLockProvider isAuthenticated={isAuthenticated}>
+      <RootLayoutNav />
+    </BiometricLockProvider>
   );
 }

@@ -1,6 +1,8 @@
 import { PhotoCard, StoryCard, TextCard, VideoCard, VoiceCard } from '@/components/timeline';
+import { ShareLoadingOverlay } from '@/components/shares';
 import { TimelineColors } from '@/constants/theme';
 import { getTimelineEntriesByDate, type TimelineEntryResponse } from '@/lib/api';
+import { useShareEntry } from '@/lib/use-share-entry';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -145,22 +147,8 @@ export default function DayViewScreen() {
     }
   };
 
-  const handleSharePress = async (entryId?: string) => {
-    if (!entryId) return;
-    try {
-      const { createShare, getShareUrl } = await import('@/lib/api');
-      const Clipboard = await import('expo-clipboard');
-      const result = await createShare(entryId);
-      if (result.data) {
-        const url = getShareUrl(result.data.token);
-        await Clipboard.setStringAsync(url);
-        const { Alert } = await import('react-native');
-        Alert.alert('Link Copied', 'Share link has been copied to your clipboard.');
-      }
-    } catch (e) {
-      console.error('Share error:', e);
-    }
-  };
+  const { shareEntry, sharingEntryId } = useShareEntry();
+  const handleSharePress = (entryId?: string) => shareEntry(entryId);
   const handleLocationPress = () => {};
   const handleMoodPress = () => {};
 
@@ -366,6 +354,9 @@ export default function DayViewScreen() {
           )}
         </ScrollView>
       </View>
+
+      {/* Share loading overlay */}
+      <ShareLoadingOverlay visible={!!sharingEntryId} />
     </SafeAreaView>
   );
 }

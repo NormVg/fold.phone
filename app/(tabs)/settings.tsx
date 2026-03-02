@@ -1,5 +1,6 @@
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { useBiometricLock } from '@/lib/biometric-lock';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -9,6 +10,7 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -21,10 +23,31 @@ const SCALE = SCREEN_WIDTH / 393;
 export default function SettingsScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { isEnabled, isAvailable, biometricType, enable, disable } = useBiometricLock();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleToggleBiometric = async () => {
+    if (isTogglingBiometric) return;
+    setIsTogglingBiometric(true);
+    try {
+      if (isEnabled) {
+        await disable();
+      } else {
+        const success = await enable();
+        if (!success) {
+          Alert.alert('Failed', 'Biometric authentication failed. Please try again.');
+        }
+      }
+    } catch {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setIsTogglingBiometric(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -93,6 +116,45 @@ export default function SettingsScreen() {
               label="Privacy"
               onPress={() => router.push('/help' as any)}
             />
+          </View>
+        </View>
+
+        {/* Preferences Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <View style={styles.card}>
+            {isAvailable ? (
+              <View style={styles.settingsRow}>
+                <View style={styles.rowLeft}>
+                  <FingerprintSettingsIcon size={20 * SCALE} />
+                  <View>
+                    <Text style={styles.rowLabel}>{biometricType ?? 'Biometric'} Lock</Text>
+                    <Text style={styles.rowSubLabel}>
+                      Lock app when you leave
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={isEnabled}
+                  onValueChange={handleToggleBiometric}
+                  disabled={isTogglingBiometric}
+                  trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.35)' }}
+                  thumbColor={isEnabled ? TimelineColors.primary : '#f4f3f4'}
+                />
+              </View>
+            ) : (
+              <View style={styles.settingsRow}>
+                <View style={styles.rowLeft}>
+                  <FingerprintSettingsIcon size={20 * SCALE} />
+                  <View>
+                    <Text style={styles.rowLabel}>Biometric Lock</Text>
+                    <Text style={styles.rowSubLabel}>
+                      Not available on this device
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
@@ -341,6 +403,49 @@ function LogoutIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+function FingerprintSettingsIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C9.243 2 7 4.243 7 7V10"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M17 10V7C17 4.243 14.757 2 12 2"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M7 14C7 11.243 9.243 9 12 9C14.757 9 17 11.243 17 14V15"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M12 12C13.105 12 14 12.895 14 14V18C14 19.657 15.343 21 17 21"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M10 14V18C10 20.209 8.209 22 6 22"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M3 14C3 9.029 7.029 5 12 5C16.971 5 21 9.029 21 14"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -416,6 +521,12 @@ const styles = StyleSheet.create({
     fontSize: 15 * SCALE,
     fontWeight: '500',
     color: TimelineColors.textDark,
+  },
+  rowSubLabel: {
+    fontSize: 12 * SCALE,
+    fontWeight: '400',
+    color: 'rgba(0,0,0,0.4)',
+    marginTop: 2 * SCALE,
   },
   divider: {
     height: 1,

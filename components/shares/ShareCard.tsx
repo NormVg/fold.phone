@@ -1,25 +1,25 @@
 import { TimelineColors } from '@/constants/theme';
 import type { ShareResponse } from '@/lib/api';
 import { getShareUrl } from '@/lib/api';
-import * as Clipboard from 'expo-clipboard';
 import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { ENTRY_TYPE_LABELS, SCALE } from './constants';
 
 // ============== ICONS ==============
 
-function CopyIcon({ size = 16 }: { size?: number }) {
+function ShareIcon({ size = 16 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="9" y="9" width="13" height="13" rx="2" stroke="#666" strokeWidth={2} />
       <Path
-        d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
+        d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12"
         stroke="#666"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <Path d="M16 6L12 2L8 6" stroke="#666" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 2V15" stroke="#666" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -99,10 +99,12 @@ export default function ShareCard({ share, onToggleStatus, onDelete }: ShareCard
     year: 'numeric',
   });
 
-  const handleCopyLink = async () => {
+  const handleShareLink = async () => {
     const url = getShareUrl(share.token);
-    await Clipboard.setStringAsync(url);
-    Alert.alert('Copied', 'Share link copied to clipboard');
+    await Share.share({
+      message: url,
+      url: url,
+    });
   };
 
   const handleDelete = () => {
@@ -153,9 +155,9 @@ export default function ShareCard({ share, onToggleStatus, onDelete }: ShareCard
           </Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={handleCopyLink}>
-          <CopyIcon size={16 * SCALE} />
-          <Text style={styles.actionButtonText}>Copy Link</Text>
+        <Pressable style={styles.actionButton} onPress={handleShareLink}>
+          <ShareIcon size={16 * SCALE} />
+          <Text style={styles.actionButtonText}>Share</Text>
         </Pressable>
 
         <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={handleDelete}>
