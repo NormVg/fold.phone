@@ -1,4 +1,5 @@
-import { ConnectSetup, ConnectTimeline } from '@/components/connect';
+import { ConnectSetup, ConnectTimeline, ConnectTransitionOverlay } from '@/components/connect';
+import type { TransitionMode } from '@/components/connect/ConnectTransitionOverlay';
 import { TimelineColors } from '@/constants/theme';
 import { endConnection, getConnectStatus, type ConnectStatus } from '@/lib/api';
 import { useRouter } from 'expo-router';
@@ -85,6 +86,7 @@ export default function ConnectScreen() {
   const [status, setStatus] = useState<ConnectStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [transitionTarget, setTransitionTarget] = useState<TransitionMode>(null);
 
   const fetchStatus = useCallback(async () => {
     setError(null);
@@ -106,10 +108,25 @@ export default function ConnectScreen() {
   };
 
   const handleConnected = () => {
-    // Refresh status after a connection change
+    // Refresh status after a non-animated connection change (decline, cancel, send)
     setLoading(true);
     fetchStatus();
   };
+
+  // Called specifically when user accepts an incoming request — plays the animation
+  const handleAccepted = useCallback(() => {
+    setTransitionTarget('connect');
+  }, []);
+
+  // At animation midpoint (dots collide), swap the underlying view by refreshing status
+  const handleTransitionMidpoint = useCallback(async () => {
+    const result = await getConnectStatus();
+    if (result.data) setStatus(result.data);
+  }, []);
+
+  const handleTransitionComplete = useCallback(() => {
+    setTransitionTarget(null);
+  }, []);
 
   const handleEndConnection = () => {
     Alert.alert(
@@ -178,8 +195,15 @@ export default function ConnectScreen() {
       ) : hasActiveConnection ? (
         <ConnectTimeline connection={status!.active!} />
       ) : (
-        <ConnectSetup status={status!} onConnected={handleConnected} />
+        <ConnectSetup status={status!} onConnected={handleConnected} onAccepted={handleAccepted} />
       )}
+
+      {/* Connection animation overlay */}
+      <ConnectTransitionOverlay
+        targetMode={transitionTarget}
+        onMidpoint={handleTransitionMidpoint}
+        onComplete={handleTransitionComplete}
+      />
     </SafeAreaView>
   );
 }

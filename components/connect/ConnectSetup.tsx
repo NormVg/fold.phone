@@ -98,12 +98,13 @@ function ClockIcon({ size = 16 }: { size?: number }) {
 
 interface ConnectSetupProps {
   status: ConnectStatus;
-  onConnected: () => void; // callback when connection is established
+  onConnected: () => void; // callback for non-animated refreshes (decline, cancel, send)
+  onAccepted?: () => void; // callback specifically when a connection is accepted — triggers animation
 }
 
 // ============== COMPONENT ==============
 
-export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
+export function ConnectSetup({ status, onConnected, onAccepted }: ConnectSetupProps) {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState('');
   const [loadingCode, setLoadingCode] = useState(false);
@@ -190,7 +191,12 @@ export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
     if (result.error) {
       Alert.alert('Error', result.error);
     } else {
-      onConnected();
+      // Use animated callback if provided, else plain refresh
+      if (onAccepted) {
+        onAccepted();
+      } else {
+        onConnected();
+      }
     }
   };
 
