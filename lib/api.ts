@@ -632,6 +632,18 @@ export async function acceptConnectRequest(requestId: string): Promise<{
 }
 
 /**
+ * Cancel a pending connection request that the current user sent
+ */
+export async function cancelConnectRequest(requestId: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest(`/api/connect/cancel/${requestId}`, {
+    method: "DELETE",
+  });
+}
+
+/**
  * Decline a pending connection request
  */
 export async function declineConnectRequest(requestId: string): Promise<{

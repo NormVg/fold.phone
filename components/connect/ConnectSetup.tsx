@@ -1,6 +1,7 @@
 import { TimelineColors } from '@/constants/theme';
 import {
   acceptConnectRequest,
+  cancelConnectRequest,
   connectByCode,
   connectByUser,
   declineConnectRequest,
@@ -112,6 +113,7 @@ export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
   const [searching, setSearching] = useState(false);
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load invite code on mount
@@ -201,6 +203,26 @@ export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
         onPress: async () => {
           await declineConnectRequest(requestId);
           onConnected(); // refresh
+        },
+      },
+    ]);
+  };
+
+  const handleCancel = (requestId: string) => {
+    Alert.alert('Cancel Request', 'Withdraw this connection request?', [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Cancel Request',
+        style: 'destructive',
+        onPress: async () => {
+          setCancellingId(requestId);
+          const result = await cancelConnectRequest(requestId);
+          setCancellingId(null);
+          if (result.error) {
+            Alert.alert('Error', result.error);
+          } else {
+            onConnected();
+          }
         },
       },
     ]);
@@ -355,12 +377,24 @@ export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
           <Text style={styles.sectionTitle}>Sent Requests</Text>
           {sentRequests.map((req) => (
             <View key={req.id} style={styles.sentRequestCard}>
-              <Text style={styles.sentRequestText}>
-                Waiting for response...
-              </Text>
-              <Text style={styles.sentRequestDate}>
-                Sent {new Date(req.createdAt).toLocaleDateString()}
-              </Text>
+              <View style={styles.sentRequestInfo}>
+                <ClockIcon size={14 * SCALE} />
+                <Text style={styles.sentRequestText}>Waiting for response...</Text>
+                <Text style={styles.sentRequestDate}>
+                  {new Date(req.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={() => handleCancel(req.id)}
+                disabled={cancellingId === req.id}
+              >
+                {cancellingId === req.id ? (
+                  <ActivityIndicator size="small" color="#810100" />
+                ) : (
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                )}
+              </Pressable>
             </View>
           ))}
         </View>
@@ -653,7 +687,14 @@ const styles = StyleSheet.create({
     padding: 16 * SCALE,
     marginBottom: 8 * SCALE,
   },
+  sentRequestInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8 * SCALE,
+    marginBottom: 12 * SCALE,
+  },
   sentRequestText: {
+    flex: 1,
     fontSize: 14 * SCALE,
     fontWeight: '500',
     color: '#666',
@@ -661,6 +702,20 @@ const styles = StyleSheet.create({
   sentRequestDate: {
     fontSize: 12 * SCALE,
     color: '#999',
-    marginTop: 4,
+  },
+  cancelButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 18 * SCALE,
+    paddingVertical: 9 * SCALE,
+    borderRadius: 10 * SCALE,
+    borderWidth: 1.5,
+    borderColor: '#810100',
+    minWidth: 80 * SCALE,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
+    color: '#810100',
   },
 });
