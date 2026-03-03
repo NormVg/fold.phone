@@ -1,6 +1,7 @@
 import { HubCalendar, HubPanelGrid } from '@/components/hub';
 import { MonthYearPicker } from '@/components/hub/MonthYearPicker';
-import { ConnectTimeline } from '@/components/connect';
+import { ConnectTimeline, ConnectTransitionOverlay } from '@/components/connect';
+import type { TransitionMode } from '@/components/connect/ConnectTransitionOverlay';
 import {
   BadgesSection,
   FoldDataCards,
@@ -84,6 +85,7 @@ export default function MainScreen() {
 
   // Connect timeline toggle state
   const [connectMode, setConnectMode] = useState(false);
+  const [transitionTarget, setTransitionTarget] = useState<TransitionMode>(null);
   const [activeConnection, setActiveConnection] = useState<ConnectActiveConnection | null>(null);
   const [connectChecked, setConnectChecked] = useState(false);
   const [sharedEntryIds, setSharedEntryIds] = useState<Set<string>>(new Set());
@@ -260,6 +262,19 @@ export default function MainScreen() {
       setSharedEntryIds((prev) => new Set(prev).add(entryId));
     }
   };
+
+  const handleConnectToggle = () => {
+    if (!activeConnection) return;
+    setTransitionTarget(connectMode ? 'personal' : 'connect');
+  };
+
+  const handleTransitionMidpoint = useCallback(() => {
+    setConnectMode(transitionTarget === 'connect');
+  }, [transitionTarget]);
+
+  const handleTransitionComplete = useCallback(() => {
+    setTransitionTarget(null);
+  }, []);
 
   const pagerAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -485,7 +500,7 @@ export default function MainScreen() {
                 date={date}
                 onProfilePress={handleProfilePress}
                 connectMode={connectMode}
-                onConnectToggle={connectChecked && activeConnection ? () => setConnectMode(!connectMode) : undefined}
+                onConnectToggle={connectChecked && activeConnection ? handleConnectToggle : undefined}
               />
 
               {/* Conditional content: normal timeline or connect timeline */}
@@ -655,6 +670,13 @@ export default function MainScreen() {
         onShareConnect={handleShareConnectAndTrack}
         isSharedToConnect={!!sheetEntryId && sharedEntryIds.has(sheetEntryId)}
         onRemoveFromConnect={handleRemoveFromConnect}
+      />
+
+      {/* Connect transition overlay */}
+      <ConnectTransitionOverlay
+        targetMode={transitionTarget}
+        onMidpoint={handleTransitionMidpoint}
+        onComplete={handleTransitionComplete}
       />
 
       {/* Bottom navigation bar - synced with pager */}
