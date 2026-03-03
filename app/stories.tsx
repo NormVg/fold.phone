@@ -337,7 +337,7 @@ export default function StoriesScreen() {
       {/* Floating Write Button */}
       <Pressable style={styles.writeButton} onPress={handleWriteStory}>
         <PenIcon size={22 * SCALE} />
-        <Text style={styles.writeButtonText}>Write a Story</Text>
+        <Text style={styles.writeButtonText}>Write your Story</Text>
       </Pressable>
     </SafeAreaView>
   );
