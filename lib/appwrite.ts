@@ -4,7 +4,7 @@
  * then uploads via the official react-native-appwrite SDK.
  */
 import * as FileSystem from 'expo-file-system';
-import { Client, ID, Storage } from 'react-native-appwrite';
+import { Client, ID, Permission, Role, Storage } from 'react-native-appwrite';
 import { apiRequest } from './api';
 
 // Cached SDK instances
@@ -28,6 +28,12 @@ async function getStorage(): Promise<{ storage: Storage; bucketId: string }> {
     throw new Error(error || 'Failed to fetch storage config');
   }
 
+  if (!data.projectId || !data.bucketId) {
+    throw new Error(
+      `Appwrite config incomplete: projectId=${data.projectId || '(empty)'}, bucketId=${data.bucketId || '(empty)'}`,
+    );
+  }
+
   cachedConfig = data;
 
   appwriteClient = new Client()
@@ -37,6 +43,7 @@ async function getStorage(): Promise<{ storage: Storage; bucketId: string }> {
 
   appwriteStorage = new Storage(appwriteClient);
 
+  console.log('[Appwrite] SDK initialized:', data.endpoint, 'project:', data.projectId);
   return { storage: appwriteStorage, bucketId: data.bucketId };
 }
 
@@ -71,16 +78,19 @@ export async function uploadToAppwrite(localUri: string): Promise<string> {
   const filename = localUri.split('/').pop() || 'file';
   const mimeType = guessMimeType(localUri);
 
-  // Get actual file size
-  let fileSize = 0;
-  try {
-    const info = await FileSystem.getInfoAsync(localUri);
-    if (info.exists && 'size' in info) {
-      fileSize = info.size || 0;
-      console.log(`[Appwrite] File: ${filename}, size: ${(fileSize / 1024 / 1024).toFixed(2)} MB, type: ${mimeType}`);
-    }
-  } catch (e) {
-    console.warn('[Appwrite] Could not get file size:', e);
+  // Validate that the file exists before attempting upload
+  const info = await FileSystem.getInfoAsync(localUri);
+  if (!info.exists) {
+    throw new Error(`[Appwrite] File does not exist at path: ${localUri}`);
+  }
+
+  const fileSize = ('size' in info && info.size) ? info.size : 0;
+  console.log(
+    `[Appwrite] Uploading: ${filename}, size: ${fileSize > 0 ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : 'unknown'}, type: ${mimeType}`,
+  );
+
+  if (fileSize === 0) {
+    console.warn('[Appwrite] File size is 0 or unknown — upload may fail for chunked files');
   }
 
   const file = {
@@ -106,14 +116,24 @@ export async function uploadToAppwrite(localUri: string): Promise<string> {
         bucketId,
         ID.unique(),
         file as any,
+        // Make uploaded files publicly readable so view URLs work
+        [Permission.read(Role.any())],
       );
 
       const viewUrl = `${cachedConfig!.endpoint}/storage/buckets/${bucketId}/files/${result.$id}/view?project=${cachedConfig!.projectId}`;
-      console.log('[Appwrite] File uploaded:', result.$id, viewUrl);
+      console.log('[Appwrite] Upload success:', result.$id, viewUrl);
       return viewUrl;
-    } catch (err) {
+    } catch (err: any) {
       lastError = err;
-      console.warn(`[Appwrite] Upload attempt ${attempt + 1} failed:`, err);
+      // Log detailed error info for debugging
+      const status = err?.code || err?.status || 'unknown';
+      const msg = err?.message || String(err);
+      console.error(
+        `[Appwrite] Upload attempt ${attempt + 1}/${MAX_RETRIES + 1} FAILED (status ${status}): ${msg}`,
+      );
+      if (err?.type) {
+        console.error(`[Appwrite] Error type: ${err.type}`);
+      }
     }
   }
 

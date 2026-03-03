@@ -4,7 +4,7 @@ import {
   type ConnectActiveConnection,
   type ConnectMemoryItem,
 } from '@/lib/api';
-import { useAudio } from '@/lib/audio-context';
+import { useAudio } from '@/lib/store/audio-store';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -204,6 +204,7 @@ function MemoryCardWrapper({
   partnerName,
   playingId,
   playbackProgress,
+  loadingEntryId,
   onPlayPress,
   onSharePress,
 }: {
@@ -211,6 +212,7 @@ function MemoryCardWrapper({
   partnerName: string;
   playingId: string | null;
   playbackProgress: number;
+  loadingEntryId: string | null;
   onPlayPress: (memoryId: string, mediaUri: string) => void;
   onSharePress?: (entryId: string) => void;
 }) {
@@ -245,6 +247,7 @@ function MemoryCardWrapper({
             duration={formatDuration(audioMedia?.duration)}
             mood={entry.mood || 'Normal'}
             isPlaying={isThisPlaying}
+            isLoading={loadingEntryId === item.id}
             progress={isThisPlaying ? playbackProgress : 0}
             onPlayPress={() => {
               if (audioMedia?.uri) {
@@ -388,8 +391,8 @@ export function ConnectTimeline({ connection, onSharePress }: ConnectTimelinePro
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Audio playback — global context (one at a time, stopped on screen change)
-  const { playingEntryId: playingId, playbackProgress, togglePlayback } = useAudio();
+  // Audio playback — global store (one at a time, stopped on screen change)
+  const { playingEntryId: playingId, playbackProgress, togglePlayback, loadingEntryId } = useAudio();
 
   const partnerName = connection.partner?.name || 'Partner';
 
@@ -454,6 +457,7 @@ export function ConnectTimeline({ connection, onSharePress }: ConnectTimelinePro
         partnerName={partnerName}
         playingId={playingId}
         playbackProgress={playbackProgress}
+        loadingEntryId={loadingEntryId}
         onPlayPress={handlePlayPress}
         onSharePress={onSharePress}
       />

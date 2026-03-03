@@ -1,4 +1,5 @@
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
 import * as ExpoLocation from 'expo-location';
@@ -262,6 +263,7 @@ function AudioWaveform({ isRecording, meterLevel }: { isRecording: boolean; mete
 export default function NewMemoryScreen() {
   const router = useRouter();
   const { addEntry, isSaving } = useTimeline();
+  const { autoLocation } = useSettings();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -317,6 +319,41 @@ export default function NewMemoryScreen() {
       }
     };
   }, []);
+
+  // Auto-attach location on mount if the setting is enabled
+  useEffect(() => {
+    if (autoLocation) {
+      (async () => {
+        try {
+          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+
+          const position = await ExpoLocation.getCurrentPositionAsync({
+            accuracy: ExpoLocation.Accuracy.Balanced,
+          });
+
+          const addresses = await ExpoLocation.reverseGeocodeAsync({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+
+          if (addresses.length > 0) {
+            const addr = addresses[0];
+            const locationName =
+              addr.city ||
+              addr.subregion ||
+              addr.region ||
+              `${addr.street || ''} ${addr.name || ''}`.trim() ||
+              `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+            setLocation(locationName);
+          }
+        } catch (err) {
+          console.warn('Auto-location failed silently:', err);
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocation]);
 
   const stopAllTimers = () => {
     if (timerRef.current) {
@@ -555,13 +592,15 @@ export default function NewMemoryScreen() {
 
     // Add entry to timeline with the final URI
     try {
-      await addEntry({
+      const result = await addEntry({
         type: 'audio',
         mood: selectedMood,
         caption: caption || 'Voice memo',
         media: finalUri ? [{ uri: finalUri, type: 'audio' as const, duration: recordingTime }] : [],
         location: location || undefined,
       });
+
+      if (!result) return; // addEntry already showed an alert
 
       console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
       if (router.canGoBack()) {

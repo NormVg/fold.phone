@@ -1,13 +1,14 @@
 import { MediaPickerSheet, MediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood';
 import { validateMediaSize } from '@/lib/media';
+import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
 import * as VideoThumbnails from 'expo-video-thumbnails';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -73,6 +74,7 @@ function LocationIcon({ size = 24 }: { size?: number }) {
 export default function EntryTextScreen() {
   const router = useRouter();
   const { addEntry, isSaving } = useTimeline();
+  const { autoLocation } = useSettings();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [textContent, setTextContent] = useState('');
   const [location, setLocation] = useState<string | null>(null);
@@ -84,6 +86,42 @@ export default function EntryTextScreen() {
   const handleClose = () => {
     router.back();
   };
+
+  // Auto-attach location on mount if the setting is enabled
+  useEffect(() => {
+    if (autoLocation) {
+      // Run silently in background — no blocking UI, no alert on permission denial
+      (async () => {
+        try {
+          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+
+          const position = await ExpoLocation.getCurrentPositionAsync({
+            accuracy: ExpoLocation.Accuracy.Balanced,
+          });
+
+          const addresses = await ExpoLocation.reverseGeocodeAsync({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+
+          if (addresses.length > 0) {
+            const addr = addresses[0];
+            const locationName =
+              addr.city ||
+              addr.subregion ||
+              addr.region ||
+              `${addr.street || ''} ${addr.name || ''}`.trim() ||
+              `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+            setLocation(locationName);
+          }
+        } catch (err) {
+          console.warn('Auto-location failed silently:', err);
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocation]);
 
   // Photo button — opens picker sheet
   const handlePhotoPress = () => {
@@ -278,13 +316,14 @@ export default function EntryTextScreen() {
 
         // Save all images as a single photo entry with media array
         if (images.length > 0) {
-          await addEntry({
+          const result = await addEntry({
             type: 'photo',
             mood: selectedMood,
             caption: textContent.trim() || undefined,
             media: images.map(img => ({ uri: img.uri, type: 'image' as const })),
             location: location || undefined,
           });
+          if (!result) return; // addEntry already showed an alert
         }
 
         // Save each video as separate entry
@@ -298,23 +337,25 @@ export default function EntryTextScreen() {
             console.warn('Failed to generate video thumbnail:', e);
           }
 
-          await addEntry({
+          const result = await addEntry({
             type: 'video',
             mood: selectedMood,
             caption: textContent.trim() || undefined,
             media: [{ uri: video.uri, type: 'video' as const, thumbnailUri: thumbnail, duration: video.duration || 0 }],
             location: location || undefined,
           });
+          if (!result) return; // addEntry already showed an alert
         }
       } else {
         // No media, just text entry
-        await addEntry({
+        const result = await addEntry({
           type: 'text',
           mood: selectedMood,
           content: textContent.trim(),
           location: location || undefined,
           media: [],
         });
+        if (!result) return;
       }
 
       console.log('Folding memory:', { textContent, selectedMood, location, mediaCount: attachedMedia.length });

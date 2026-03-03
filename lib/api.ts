@@ -731,6 +731,78 @@ export async function getConnectMemories(
   );
 }
 
+// =============================================================================
+// Settings API
+// =============================================================================
+
+export interface UserSettings {
+  autoLocation: boolean;
+}
+
+/**
+ * Get user settings from backend
+ */
+export async function getUserSettings(): Promise<{
+  data: UserSettings | null;
+  error: string | null;
+}> {
+  return apiRequest<UserSettings>("/api/user/settings");
+}
+
+/**
+ * Update user settings (partial update)
+ */
+export async function updateUserSettings(
+  settings: Partial<UserSettings>
+): Promise<{ data: UserSettings | null; error: string | null }> {
+  return apiRequest<UserSettings>("/api/user/settings", {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}
+
+// =============================================================================
+// App Config API
+// =============================================================================
+
+export interface AppConfig {
+  cooldownDays: number;
+}
+
+/**
+ * Get app config from backend (public endpoint, no auth required)
+ */
+export async function getAppConfig(): Promise<{
+  data: AppConfig | null;
+  error: string | null;
+}> {
+  return apiRequest<AppConfig>("/api/config/app");
+}
+
+// =============================================================================
+// Profile Stats API
+// =============================================================================
+
+export interface ProfileStats {
+  foldScore: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalEntries: number;
+  totalAudioMinutes: number;
+  isStreakActive: boolean;
+  badges: { type: string; earnedAt: string }[];
+}
+
+/**
+ * Get profile stats from backend
+ */
+export async function getProfileStats(): Promise<{
+  data: ProfileStats | null;
+  error: string | null;
+}> {
+  return apiRequest<ProfileStats>("/api/profile/me");
+}
+
 /**
  * Upload a media file (photo, video, audio). Returns the remote URL.
  */

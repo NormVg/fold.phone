@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { getMoodIcon } from './MoodIcons';
 
@@ -16,6 +16,7 @@ interface VoiceCardProps {
   mood?: string; // e.g., "SAD", "SAT"
   location?: string; // e.g., "Mumbai", "New Delhi"
   isPlaying?: boolean; // Whether this card's audio is currently playing
+  isLoading?: boolean; // Whether audio is currently buffering/loading
   progress?: number; // Playback progress 0-1
   onPlayPress?: () => void;
   onSharePress?: () => void;
@@ -139,6 +140,7 @@ export function VoiceCard({
   mood = 'SAD',
   location,
   isPlaying = false,
+  isLoading = false,
   progress = 0,
   onPlayPress,
   onSharePress,
@@ -164,8 +166,12 @@ export function VoiceCard({
 
       {/* Middle section: Play button + Waveform + Duration */}
       <View style={styles.waveformContainer}>
-        <Pressable onPress={onPlayPress} style={styles.playButton}>
-          {isPlaying ? <PauseIcon size={36 * SCALE} /> : <PlayIcon size={36 * SCALE} />}
+        <Pressable onPress={onPlayPress} style={styles.playButton} disabled={isLoading}>
+          {isLoading ? (
+            <View style={[styles.loadingCircle, { width: 36 * SCALE, height: 36 * SCALE, borderRadius: 18 * SCALE }]}>
+              <ActivityIndicator size="small" color="#FDFBF7" />
+            </View>
+          ) : isPlaying ? <PauseIcon size={36 * SCALE} /> : <PlayIcon size={36 * SCALE} />}
         </Pressable>
         <AudioWaveform isPlaying={isPlaying} progress={progress} />
         <Text style={styles.durationText}>{duration}</Text>
@@ -258,6 +264,11 @@ const styles = StyleSheet.create({
   },
   playButton: {
     marginRight: 8 * SCALE,
+  },
+  loadingCircle: {
+    backgroundColor: '#810100',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   durationText: {
     fontSize: 13 * SCALE,

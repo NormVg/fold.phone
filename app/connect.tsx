@@ -2,6 +2,7 @@ import { ConnectSetup, ConnectTimeline, ConnectTransitionOverlay } from '@/compo
 import type { TransitionMode } from '@/components/connect/ConnectTransitionOverlay';
 import { TimelineColors } from '@/constants/theme';
 import { endConnection, getConnectStatus, type ConnectStatus } from '@/lib/api';
+import { useSettings } from '@/lib/settings-context';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -83,6 +84,7 @@ function MoreIcon({ size = 20 }: { size?: number }) {
 
 export default function ConnectScreen() {
   const router = useRouter();
+  const { appConfig } = useSettings();
   const [status, setStatus] = useState<ConnectStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export default function ConnectScreen() {
   const handleEndConnection = () => {
     Alert.alert(
       'End Connection',
-      'Are you sure? There will be a 30-day cooldown before you can connect with someone else.',
+      `Are you sure? There will be a ${appConfig?.cooldownDays ?? 30}-day cooldown before you can connect with someone else.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {

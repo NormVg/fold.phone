@@ -2,7 +2,7 @@ import { PhotoCard, StoryCard, TextCard, VideoCard, VoiceCard } from '@/componen
 import { ShareLoadingOverlay } from '@/components/shares';
 import { TimelineColors } from '@/constants/theme';
 import { getTimelineEntriesByDate, type TimelineEntryResponse } from '@/lib/api';
-import { useAudio } from '@/lib/audio-context';
+import { useAudio } from '@/lib/store/audio-store';
 import { useShareEntry } from '@/lib/use-share-entry';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -43,8 +43,8 @@ export default function DayViewScreen() {
   const [entries, setEntries] = useState<TimelineEntryResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Audio playback — global context (one audio at a time, stops on screen blur)
-  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback } = useAudio();
+  // Audio playback — global store (one audio at a time, stops on screen blur)
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId } = useAudio();
 
   // Stop audio when navigating away
   useFocusEffect(
@@ -118,6 +118,7 @@ export default function DayViewScreen() {
           mood={mood}
           location={entry.location ?? undefined}
           isPlaying={playingEntryId === entry.id}
+          isLoading={loadingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
           onSharePress={() => handleSharePress(entry.id)}

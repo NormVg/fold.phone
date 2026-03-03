@@ -1,12 +1,13 @@
 import { MediaPickerSheet, StoryMediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood/MoodPicker';
 import { validateMediaSize } from '@/lib/media';
+import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoLocation from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -277,6 +278,7 @@ interface StoryPage {
 export default function EntryStoryScreen() {
   const router = useRouter();
   const { addEntry, isSaving } = useTimeline();
+  const { autoLocation } = useSettings();
   const [storyTitle, setStoryTitle] = useState('');
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [location, setLocation] = useState<string | null>(null);
@@ -294,6 +296,41 @@ export default function EntryStoryScreen() {
   const today = new Date();
   const dayName = 'TODAY';
   const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // Auto-attach location on mount if the setting is enabled
+  useEffect(() => {
+    if (autoLocation) {
+      (async () => {
+        try {
+          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+
+          const position = await ExpoLocation.getCurrentPositionAsync({
+            accuracy: ExpoLocation.Accuracy.Balanced,
+          });
+
+          const addresses = await ExpoLocation.reverseGeocodeAsync({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+
+          if (addresses.length > 0) {
+            const addr = addresses[0];
+            const locationName =
+              addr.city ||
+              addr.subregion ||
+              addr.region ||
+              `${addr.street || ''} ${addr.name || ''}`.trim() ||
+              `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+            setLocation(locationName);
+          }
+        } catch (err) {
+          console.warn('Auto-location failed silently:', err);
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocation]);
 
   const handleClose = () => {
     if (storyTitle.trim() || pages.some(p => p.content.trim() || p.media.length > 0)) {
@@ -608,7 +645,7 @@ export default function EntryStoryScreen() {
     const allMedia = pages.flatMap(page => page.media);
 
     try {
-      await addEntry({
+      const result = await addEntry({
         type: 'story',
         mood: selectedMood,
         location: location || undefined,
@@ -621,6 +658,8 @@ export default function EntryStoryScreen() {
           duration: m.duration,
         })) : [],
       });
+
+      if (!result) return; // addEntry already showed an alert
 
       // Navigate to timeline
       if (router.canGoBack()) {

@@ -12,10 +12,10 @@ import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AudioProvider } from '@/lib/audio-context';
-import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { BiometricLockProvider } from '@/lib/biometric-lock';
-import { TimelineProvider } from '@/lib/timeline-context';
+import { useAuthStore } from '@/lib/store/auth-store';
+import { useSettingsStore } from '@/lib/store/settings-store';
+import { useTimelineStore } from '@/lib/store/timeline-store';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -24,10 +24,32 @@ export const unstable_settings = {
   initialRouteName: 'onboarding',
 };
 
+// Initializes all Zustand stores on mount and reacts to auth changes.
+// Replaces the old nested AuthProvider → TimelineProvider → AudioProvider → SettingsProvider.
+function StoreInitializer({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+
+  // Boot auth on mount
+  useEffect(() => {
+    useAuthStore.getState().initialize();
+  }, []);
+
+  // When auth state changes, propagate to timeline + settings stores
+  useEffect(() => {
+    useTimelineStore.getState().onAuthChange(isAuthenticated, user?.id ?? null);
+    useSettingsStore.getState().loadAll();
+  }, [isAuthenticated, user?.id]);
+
+  return <>{children}</>;
+}
+
 // Protected route wrapper
 // Flow: onboarding (first time) → auth/signup → (tabs)
 function useProtectedRoute() {
-  const { isAuthenticated, hasSeenOnboarding, isLoading } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasSeenOnboarding = useAuthStore((s) => s.hasSeenOnboarding);
+  const isLoading = useAuthStore((s) => s.isLoading);
   const segments = useSegments();
   const router = useRouter();
 
@@ -72,7 +94,8 @@ function useProtectedRoute() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { isLoading, hasSeenOnboarding } = useAuth();
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const hasSeenOnboarding = useAuthStore((s) => s.hasSeenOnboarding);
 
   const [fontsLoaded] = useFonts({
     'SignPainter': require('../assets/fonts/SignPainterHouseScript.ttf'),
@@ -137,18 +160,14 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <TimelineProvider>
-        <AudioProvider>
-          <RootLayoutWithLock />
-        </AudioProvider>
-      </TimelineProvider>
-    </AuthProvider>
+    <StoreInitializer>
+      <RootLayoutWithLock />
+    </StoreInitializer>
   );
 }
 
 function RootLayoutWithLock() {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return (
     <BiometricLockProvider isAuthenticated={isAuthenticated}>
       <RootLayoutNav />

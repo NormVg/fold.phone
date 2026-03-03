@@ -13,10 +13,10 @@ import {
 import { ShareLoadingOverlay, ShareSheet } from '@/components/shares';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
-import { useAuth } from '@/lib/auth-context';
-import { useAudio } from '@/lib/audio-context';
+import { useAuth } from '@/lib/store/auth-store';
+import { useAudio } from '@/lib/store/audio-store';
 import { useProfileStats } from '@/lib/profile-hooks';
-import { useTimeline } from '@/lib/timeline-context';
+import { useTimeline } from '@/lib/store/timeline-store';
 import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
 import { getConnectStatus, getConnectMemories, unshareFromConnect, type ConnectActiveConnection } from '@/lib/api';
 import { useHubActivity } from '@/lib/use-hub-activity';
@@ -168,7 +168,7 @@ export default function MainScreen() {
   const handleFoldersPress = () => router.push('/media');
 
   // Timeline handlers
-  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback } = useAudio();
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId } = useAudio();
 
   // Stop audio when navigating away from this screen
   useFocusEffect(
@@ -276,6 +276,7 @@ export default function MainScreen() {
           mood={mood}
           location={entry.location ?? undefined}
           isPlaying={playingEntryId === entry.id}
+          isLoading={loadingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
           onSharePress={() => handleSharePress(entry.id)}

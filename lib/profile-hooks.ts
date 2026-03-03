@@ -1,5 +1,5 @@
 import { ActivityLevel } from '@/components/hub/types';
-import { useTimeline } from '@/lib/timeline-context';
+import { useTimeline } from '@/lib/store/timeline-store';
 import { useMemo } from 'react';
 
 export interface ProfileStats {

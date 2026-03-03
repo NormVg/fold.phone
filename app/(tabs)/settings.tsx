@@ -1,6 +1,7 @@
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useBiometricLock } from '@/lib/biometric-lock';
+import { useSettings } from '@/lib/settings-context';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -24,8 +25,16 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const { isEnabled, isAvailable, biometricType, enable, disable } = useBiometricLock();
+  const {
+    autoLocation,
+    updateAutoLocation,
+    isSettingsLoading,
+    profileStats,
+    isStatsLoading,
+  } = useSettings();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
+  const [isTogglingLocation, setIsTogglingLocation] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -47,6 +56,18 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setIsTogglingBiometric(false);
+    }
+  };
+
+  const handleToggleAutoLocation = async () => {
+    if (isTogglingLocation || isSettingsLoading) return;
+    setIsTogglingLocation(true);
+    try {
+      await updateAutoLocation(!autoLocation);
+    } catch {
+      Alert.alert('Error', 'Could not update location setting. Please try again.');
+    } finally {
+      setIsTogglingLocation(false);
     }
   };
 
@@ -95,6 +116,33 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Your Fold Stats Section */}
+        {(profileStats || isStatsLoading) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Fold</Text>
+            <View style={styles.card}>
+              <View style={styles.statsGrid}>
+                <StatCell
+                  label="Total Entries"
+                  value={isStatsLoading ? '—' : String(profileStats?.totalEntries ?? 0)}
+                />
+                <StatCell
+                  label="Current Streak"
+                  value={isStatsLoading ? '—' : `${profileStats?.currentStreak ?? 0}d`}
+                />
+                <StatCell
+                  label="Fold Score"
+                  value={isStatsLoading ? '—' : String(profileStats?.foldScore ?? 0)}
+                />
+                <StatCell
+                  label="Longest Streak"
+                  value={isStatsLoading ? '—' : `${profileStats?.longestStreak ?? 0}d`}
+                />
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -173,6 +221,25 @@ export default function SettingsScreen() {
               label="Appearance"
               onPress={() => router.push('/appearance' as any)}
             />
+            <Divider />
+            <View style={styles.settingsRow}>
+              <View style={styles.rowLeft}>
+                <LocationSettingsIcon size={20 * SCALE} />
+                <View>
+                  <Text style={styles.rowLabel}>Auto-location</Text>
+                  <Text style={styles.rowSubLabel}>
+                    Attach location to every entry
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={autoLocation}
+                onValueChange={handleToggleAutoLocation}
+                disabled={isTogglingLocation || isSettingsLoading}
+                trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.35)' }}
+                thumbColor={autoLocation ? TimelineColors.primary : '#f4f3f4'}
+              />
+            </View>
           </View>
         </View>
 
@@ -247,6 +314,15 @@ function SettingsRow({
 
 function Divider() {
   return <View style={styles.divider} />;
+}
+
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.statCell}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
 }
 
 // Icons
@@ -464,6 +540,17 @@ function FingerprintSettingsIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+function LocationSettingsIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+        fill={TimelineColors.primary}
+      />
+    </Svg>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -577,5 +664,32 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40 * SCALE,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  statCell: {
+    width: '50%',
+    paddingHorizontal: 16 * SCALE,
+    paddingVertical: 16 * SCALE,
+    alignItems: 'center',
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.07)',
+  },
+  statValue: {
+    fontSize: 22 * SCALE,
+    fontWeight: '700',
+    color: TimelineColors.primary,
+    marginBottom: 4 * SCALE,
+  },
+  statLabel: {
+    fontSize: 11 * SCALE,
+    fontWeight: '500',
+    color: 'rgba(0,0,0,0.45)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
 });
