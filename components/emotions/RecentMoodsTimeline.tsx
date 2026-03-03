@@ -40,7 +40,6 @@ export function RecentMoodsTimeline({ entries, onEntryPress }: RecentMoodsTimeli
           const MoodIcon = MOOD_ICONS[entry.mood!];
           const chipBg = MOOD_COLORS[entry.mood!];
           const dateObj = entry.createdAt;
-          const dayLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
           const timeLabel = dateObj.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -57,7 +56,6 @@ export function RecentMoodsTimeline({ entries, onEntryPress }: RecentMoodsTimeli
                 <MoodIcon size={44 * SCALE} />
               </View>
               <Text style={styles.recentChipMood}>{entry.mood}</Text>
-              <Text style={styles.recentChipDate}>{dayLabel}</Text>
               <Text style={styles.recentChipTime}>{timeLabel}</Text>
             </Pressable>
           );
@@ -120,11 +118,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: TimelineColors.textDark,
     marginBottom: 3 * SCALE,
-  },
-  recentChipDate: {
-    fontSize: 12 * SCALE,
-    fontWeight: '500',
-    color: '#777',
   },
   recentChipTime: {
     fontSize: 10 * SCALE,

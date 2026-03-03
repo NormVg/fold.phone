@@ -12,6 +12,7 @@ import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AudioProvider } from '@/lib/audio-context';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { BiometricLockProvider } from '@/lib/biometric-lock';
 import { TimelineProvider } from '@/lib/timeline-context';
@@ -138,7 +139,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <TimelineProvider>
-        <RootLayoutWithLock />
+        <AudioProvider>
+          <RootLayoutWithLock />
+        </AudioProvider>
       </TimelineProvider>
     </AuthProvider>
   );

@@ -4,8 +4,8 @@ import {
   type ConnectActiveConnection,
   type ConnectMemoryItem,
 } from '@/lib/api';
-import { Audio } from 'expo-av';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useAudio } from '@/lib/audio-context';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -388,70 +388,18 @@ export function ConnectTimeline({ connection, onSharePress }: ConnectTimelinePro
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Audio playback state
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState(0);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  // Audio playback — global context (one at a time, stopped on screen change)
+  const { playingEntryId: playingId, playbackProgress, togglePlayback } = useAudio();
 
   const partnerName = connection.partner?.name || 'Partner';
 
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-    };
-  }, []);
+  const handlePlayPress = useCallback(
+    async (memoryId: string, mediaUri: string) => {
+      await togglePlayback(memoryId, mediaUri);
+    },
+    [togglePlayback]
+  );
 
-  const handlePlayPress = useCallback(async (memoryId: string, mediaUri: string) => {
-    try {
-      // If already playing this one, stop it
-      if (playingId === memoryId) {
-        if (soundRef.current) {
-          await soundRef.current.stopAsync();
-          await soundRef.current.unloadAsync();
-          soundRef.current = null;
-        }
-        setPlayingId(null);
-        setPlaybackProgress(0);
-        return;
-      }
-
-      // Stop any currently playing audio
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-
-      // Load and play the new audio
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: mediaUri },
-        { shouldPlay: true },
-        (status) => {
-          if (status.isLoaded) {
-            if (status.durationMillis && status.positionMillis) {
-              setPlaybackProgress(status.positionMillis / status.durationMillis);
-            }
-            if (status.didJustFinish) {
-              setPlayingId(null);
-              setPlaybackProgress(0);
-              soundRef.current = null;
-            }
-          }
-        }
-      );
-
-      soundRef.current = sound;
-      setPlayingId(memoryId);
-      setPlaybackProgress(0);
-    } catch (err) {
-      console.error('Audio playback error:', err);
-      setPlayingId(null);
-      setPlaybackProgress(0);
-    }
-  }, [playingId]);
 
   const fetchMemories = useCallback(async (cursor?: string) => {
     const result = await getConnectMemories(cursor);

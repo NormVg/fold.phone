@@ -1,4 +1,4 @@
-import { MediaToolbar } from '@/components/entry';
+import { MediaPickerSheet, MediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood';
 import { validateMediaSize } from '@/lib/media';
 import { useTimeline } from '@/lib/timeline-context';
@@ -78,108 +78,119 @@ export default function EntryTextScreen() {
   const [location, setLocation] = useState<string | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [attachedMedia, setAttachedMedia] = useState<{ uri: string; type: 'image' | 'video'; duration?: number }[]>([]);
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const [videoPickerVisible, setVideoPickerVisible] = useState(false);
 
   const handleClose = () => {
     router.back();
   };
 
-  // Photo picker - only images allowed if images exist (exclusive with videos)
-  const handlePhotoPress = async () => {
-    // Check if videos are already attached
+  // Photo button — opens picker sheet
+  const handlePhotoPress = () => {
     const hasVideos = attachedMedia.some(m => m.type === 'video');
     if (hasVideos) {
-      Alert.alert(
-        'Media Type Conflict',
-        'You already have a video attached. Remove it first to add photos.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Media Type Conflict', 'You already have a video attached. Remove it first to add photos.');
       return;
     }
+    setPhotoPickerVisible(true);
+  };
 
+  // Take photo with camera
+  const handlePhotoCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera access to take photos.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const err = await validateMediaSize(asset.uri, 'image', asset.fileSize);
+      if (err) { Alert.alert('File Too Large', err); return; }
+      setAttachedMedia(prev => [...prev, { uri: asset.uri, type: 'image' as const }]);
+    }
+  };
+
+  // Choose photos from library
+  const handlePhotoLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant photo library access to add photos.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets.length > 0) {
-      // Validate file sizes
       const validPhotos: { uri: string; type: 'image' }[] = [];
       const oversized: string[] = [];
-
       for (const asset of result.assets) {
         const err = await validateMediaSize(asset.uri, 'image', asset.fileSize);
-        if (err) {
-          oversized.push(err);
-        } else {
-          validPhotos.push({ uri: asset.uri, type: 'image' as const });
-        }
+        if (err) { oversized.push(err); } else { validPhotos.push({ uri: asset.uri, type: 'image' as const }); }
       }
-
-      if (oversized.length > 0) {
-        Alert.alert('File Too Large', oversized[0]);
-      }
-
-      if (validPhotos.length > 0) {
-        setAttachedMedia(prev => [...prev, ...validPhotos]);
-      }
+      if (oversized.length > 0) Alert.alert('File Too Large', oversized[0]);
+      if (validPhotos.length > 0) setAttachedMedia(prev => [...prev, ...validPhotos]);
     }
   };
 
-  // Video picker - only one video allowed (exclusive with photos)
-  const handleVideoPress = async () => {
-    // Check if photos are already attached
+  // Video button — opens picker sheet
+  const handleVideoPress = () => {
     const hasPhotos = attachedMedia.some(m => m.type === 'image');
     if (hasPhotos) {
-      Alert.alert(
-        'Media Type Conflict',
-        'You already have photos attached. Remove them first to add a video.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Media Type Conflict', 'You already have photos attached. Remove them first to add a video.');
       return;
     }
-
-    // Check if a video is already attached (only one video allowed)
     const hasVideo = attachedMedia.some(m => m.type === 'video');
     if (hasVideo) {
-      Alert.alert(
-        'Video Limit',
-        'Only one video can be attached at a time. Remove the current video first.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Video Limit', 'Only one video can be attached at a time. Remove the current video first.');
       return;
     }
+    setVideoPickerVisible(true);
+  };
 
+  // Record video with camera
+  const handleVideoCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera access to record video.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      videoMaxDuration: 60,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const sizeError = await validateMediaSize(asset.uri, 'video', asset.fileSize);
+      if (sizeError) { Alert.alert('File Too Large', sizeError); return; }
+      const durationInSeconds = asset.duration ? Math.round(asset.duration / 1000) : 0;
+      setAttachedMedia([{ uri: asset.uri, type: 'video', duration: durationInSeconds }]);
+    }
+  };
+
+  // Choose video from library
+  const handleVideoLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant photo library access to add videos.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
       quality: 0.8,
-      videoMaxDuration: 60, // 1 minute max
+      videoMaxDuration: 60,
     });
-
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-
-      // Validate file size
       const sizeError = await validateMediaSize(asset.uri, 'video', asset.fileSize);
-      if (sizeError) {
-        Alert.alert('File Too Large', sizeError);
-        return;
-      }
-
-      // expo-image-picker provides duration in milliseconds
+      if (sizeError) { Alert.alert('File Too Large', sizeError); return; }
       const durationInSeconds = asset.duration ? Math.round(asset.duration / 1000) : 0;
       setAttachedMedia([{ uri: asset.uri, type: 'video', duration: durationInSeconds }]);
     }
@@ -424,6 +435,24 @@ export default function EntryTextScreen() {
           )}
         </Pressable>
       </View>
+
+      {/* Photo picker sheet */}
+      <MediaPickerSheet
+        visible={photoPickerVisible}
+        onDismiss={() => setPhotoPickerVisible(false)}
+        mediaType="photo"
+        onCamera={handlePhotoCamera}
+        onLibrary={handlePhotoLibrary}
+      />
+
+      {/* Video picker sheet */}
+      <MediaPickerSheet
+        visible={videoPickerVisible}
+        onDismiss={() => setVideoPickerVisible(false)}
+        mediaType="video"
+        onCamera={handleVideoCamera}
+        onLibrary={handleVideoLibrary}
+      />
     </SafeAreaView>
   );
 }

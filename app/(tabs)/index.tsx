@@ -14,15 +14,15 @@ import { ShareLoadingOverlay, ShareSheet } from '@/components/shares';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { useAudio } from '@/lib/audio-context';
 import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
 import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
 import { getConnectStatus, getConnectMemories, unshareFromConnect, type ConnectActiveConnection } from '@/lib/api';
 import { useHubActivity } from '@/lib/use-hub-activity';
 import { useShareEntry } from '@/lib/use-share-entry';
-import { Audio } from 'expo-av';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -168,70 +168,14 @@ export default function MainScreen() {
   const handleFoldersPress = () => router.push('/media');
 
   // Timeline handlers
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState<number>(0); // 0 to 1
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback } = useAudio();
 
-  const playAudio = async (uri: string | undefined, entryId: string) => {
-    if (!uri) {
-      console.log('No audio URI to play');
-      return;
-    }
-
-    try {
-      // If same entry is playing, toggle pause/resume
-      if (playingEntryId === entryId && soundRef.current) {
-        const status = await soundRef.current.getStatusAsync();
-        if ('isPlaying' in status && status.isPlaying) {
-          await soundRef.current.pauseAsync();
-          setPlayingEntryId(null);
-          return;
-        } else {
-          await soundRef.current.playAsync();
-          setPlayingEntryId(entryId);
-          return;
-        }
-      }
-
-      // Stop and unload any currently playing sound
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-        setPlayingEntryId(null);
-        setPlaybackProgress(0);
-      }
-
-      // Create and play new sound
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true, progressUpdateIntervalMillis: 100 }
-      );
-      soundRef.current = sound;
-      setPlayingEntryId(entryId);
-      setPlaybackProgress(0);
-
-      // Track playback progress
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if ('isLoaded' in status && status.isLoaded) {
-          if (status.durationMillis && status.positionMillis) {
-            const progress = status.positionMillis / status.durationMillis;
-            setPlaybackProgress(progress);
-          }
-          if (status.didJustFinish) {
-            sound.unloadAsync();
-            soundRef.current = null;
-            setPlayingEntryId(null);
-            setPlaybackProgress(0);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      setPlayingEntryId(null);
-      setPlaybackProgress(0);
-    }
-  };
+  // Stop audio when navigating away from this screen
+  useFocusEffect(
+    useCallback(() => {
+      return () => { stopPlayback(); };
+    }, [stopPlayback])
+  );
 
   const handlePlayPress = () => console.log('Play pressed');
   const handleSharePress = (entryId?: string) => shareEntry(entryId);
@@ -333,7 +277,7 @@ export default function MainScreen() {
           location={entry.location ?? undefined}
           isPlaying={playingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
-          onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
+          onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
           onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}

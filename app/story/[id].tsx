@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { getMoodIcon } from '@/components/timeline/MoodIcons';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -116,28 +117,6 @@ function ChevronRight({ size = 20 }: { size?: number }) {
   );
 }
 
-// Mood icons
-function HappyIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" stroke={COLORS.primary} strokeWidth={2} />
-      <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={COLORS.primary} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx="9" cy="9" r="1" fill={COLORS.primary} />
-      <Circle cx="15" cy="9" r="1" fill={COLORS.primary} />
-    </Svg>
-  );
-}
-
-function SadIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" stroke={COLORS.primary} strokeWidth={2} />
-      <Path d="M8 16s1.5-2 4-2 4 2 4 2" stroke={COLORS.primary} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx="9" cy="9" r="1" fill={COLORS.primary} />
-      <Circle cx="15" cy="9" r="1" fill={COLORS.primary} />
-    </Svg>
-  );
-}
 
 function calculateReadTime(content: string): string {
   const wordsPerMinute = 200;
@@ -193,7 +172,7 @@ export default function StoryScreen() {
   const pages = storyContent.split('\n\n---\n\n').filter(Boolean);
   const totalPages = pages.length || 1;
   const readTime = calculateReadTime(storyContent);
-  const MoodIcon = entry.mood?.toLowerCase() === 'sad' ? SadIcon : HappyIcon;
+  const MoodIcon = entry.mood ? getMoodIcon(entry.mood) : null;
 
   // Format date
   const date = new Date(entry.createdAt);
@@ -262,7 +241,7 @@ export default function StoryScreen() {
               <Text style={styles.tagText}>{totalPages} pages</Text>
             </View>
           )}
-          {entry.mood && (
+          {entry.mood && MoodIcon && (
             <View style={styles.tag}>
               <MoodIcon size={14 * SCALE} />
               <Text style={styles.tagText}>{entry.mood}</Text>

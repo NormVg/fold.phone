@@ -1,4 +1,4 @@
-import { StoryMediaToolbar } from '@/components/entry';
+import { MediaPickerSheet, StoryMediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood/MoodPicker';
 import { validateMediaSize } from '@/lib/media';
 import { useTimeline } from '@/lib/timeline-context';
@@ -283,6 +283,8 @@ export default function EntryStoryScreen() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [pages, setPages] = useState<StoryPage[]>([{ id: '1', content: '', media: [] }]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const [videoPickerVisible, setVideoPickerVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -390,30 +392,53 @@ export default function EntryStoryScreen() {
     setPages(newPages);
   };
 
-  const handlePhotoPress = async () => {
+  const handlePhotoPress = () => {
+    setPhotoPickerVisible(true);
+  };
+
+  // Take photo with camera (story mode — single image)
+  const handlePhotoCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera access to take photos.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const err = await validateMediaSize(asset.uri, 'image', asset.fileSize);
+      if (err) { Alert.alert('File Too Large', err); return; }
+      const newPages = [...pages];
+      newPages[currentPageIndex].media = [
+        ...newPages[currentPageIndex].media,
+        { uri: asset.uri, type: 'image' as const },
+      ];
+      setPages(newPages);
+    }
+  };
+
+  // Choose photos/videos from library (story mode supports all)
+  const handlePhotoLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant photo library access.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsMultipleSelection: true,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets.length > 0) {
-      // Validate file sizes
       const validMedia: { uri: string; type: 'image' | 'video'; duration?: number }[] = [];
       const oversized: string[] = [];
-
       for (const asset of result.assets) {
         const mediaType = asset.type === 'video' ? 'video' : 'image';
         const err = await validateMediaSize(asset.uri, mediaType as 'image' | 'video', asset.fileSize);
-        if (err) {
-          oversized.push(err);
-        } else {
+        if (err) { oversized.push(err); } else {
           validMedia.push({
             uri: asset.uri,
             type: (asset.type === 'video' ? 'video' : 'image') as 'image' | 'video',
@@ -421,11 +446,7 @@ export default function EntryStoryScreen() {
           });
         }
       }
-
-      if (oversized.length > 0) {
-        Alert.alert('File Too Large', oversized[0]);
-      }
-
+      if (oversized.length > 0) Alert.alert('File Too Large', oversized[0]);
       if (validMedia.length > 0) {
         const newPages = [...pages];
         newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...validMedia];
@@ -438,29 +459,53 @@ export default function EntryStoryScreen() {
     router.push('/entry-audio');
   };
 
-  const handleVideoPress = async () => {
+  const handleVideoPress = () => {
+    setVideoPickerVisible(true);
+  };
+
+  // Record video with camera (story mode)
+  const handleVideoCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera access to record video.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      videoMaxDuration: 60,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const err = await validateMediaSize(asset.uri, 'video', asset.fileSize);
+      if (err) { Alert.alert('File Too Large', err); return; }
+      const newPages = [...pages];
+      newPages[currentPageIndex].media = [
+        ...newPages[currentPageIndex].media,
+        { uri: asset.uri, type: 'video' as const, duration: asset.duration ? Math.round(asset.duration / 1000) : undefined },
+      ];
+      setPages(newPages);
+    }
+  };
+
+  // Choose videos from library (story mode)
+  const handleVideoLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant photo library access.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsMultipleSelection: true,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets.length > 0) {
-      // Validate file sizes
       const validMedia: { uri: string; type: 'video'; duration?: number }[] = [];
       const oversized: string[] = [];
-
       for (const asset of result.assets) {
         const err = await validateMediaSize(asset.uri, 'video', asset.fileSize);
-        if (err) {
-          oversized.push(err);
-        } else {
+        if (err) { oversized.push(err); } else {
           validMedia.push({
             uri: asset.uri,
             type: 'video' as const,
@@ -468,11 +513,7 @@ export default function EntryStoryScreen() {
           });
         }
       }
-
-      if (oversized.length > 0) {
-        Alert.alert('File Too Large', oversized[0]);
-      }
-
+      if (oversized.length > 0) Alert.alert('File Too Large', oversized[0]);
       if (validMedia.length > 0) {
         const newPages = [...pages];
         newPages[currentPageIndex].media = [...newPages[currentPageIndex].media, ...validMedia];
@@ -814,6 +855,24 @@ export default function EntryStoryScreen() {
           )}
         </Pressable>
       </View>
+
+      {/* Photo picker sheet */}
+      <MediaPickerSheet
+        visible={photoPickerVisible}
+        onDismiss={() => setPhotoPickerVisible(false)}
+        mediaType="photo"
+        onCamera={handlePhotoCamera}
+        onLibrary={handlePhotoLibrary}
+      />
+
+      {/* Video picker sheet */}
+      <MediaPickerSheet
+        visible={videoPickerVisible}
+        onDismiss={() => setVideoPickerVisible(false)}
+        mediaType="video"
+        onCamera={handleVideoCamera}
+        onLibrary={handleVideoLibrary}
+      />
     </SafeAreaView>
   );
 }

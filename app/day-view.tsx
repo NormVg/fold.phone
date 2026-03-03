@@ -2,10 +2,10 @@ import { PhotoCard, StoryCard, TextCard, VideoCard, VoiceCard } from '@/componen
 import { ShareLoadingOverlay } from '@/components/shares';
 import { TimelineColors } from '@/constants/theme';
 import { getTimelineEntriesByDate, type TimelineEntryResponse } from '@/lib/api';
+import { useAudio } from '@/lib/audio-context';
 import { useShareEntry } from '@/lib/use-share-entry';
-import { Audio } from 'expo-av';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -43,10 +43,15 @@ export default function DayViewScreen() {
   const [entries, setEntries] = useState<TimelineEntryResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Audio playback state
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState<number>(0);
+  // Audio playback — global context (one audio at a time, stops on screen blur)
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback } = useAudio();
+
+  // Stop audio when navigating away
+  useFocusEffect(
+    useCallback(() => {
+      return () => { stopPlayback(); };
+    }, [stopPlayback])
+  );
 
   // Parse the date for display
   const dateParts = dateStr ? dateStr.split('-').map(Number) : [0, 0, 0];
@@ -85,68 +90,6 @@ export default function DayViewScreen() {
     fetchEntries();
   }, [fetchEntries]);
 
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.stopAsync().then(() => soundRef.current?.unloadAsync());
-      }
-    };
-  }, []);
-
-  const playAudio = async (uri: string | undefined, entryId: string) => {
-    if (!uri) return;
-
-    try {
-      if (playingEntryId === entryId && soundRef.current) {
-        const status = await soundRef.current.getStatusAsync();
-        if ('isPlaying' in status && status.isPlaying) {
-          await soundRef.current.pauseAsync();
-          setPlayingEntryId(null);
-          return;
-        } else {
-          await soundRef.current.playAsync();
-          setPlayingEntryId(entryId);
-          return;
-        }
-      }
-
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-        setPlayingEntryId(null);
-        setPlaybackProgress(0);
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true, progressUpdateIntervalMillis: 100 }
-      );
-      soundRef.current = sound;
-      setPlayingEntryId(entryId);
-      setPlaybackProgress(0);
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if ('isLoaded' in status && status.isLoaded) {
-          if (status.durationMillis && status.positionMillis) {
-            setPlaybackProgress(status.positionMillis / status.durationMillis);
-          }
-          if (status.didJustFinish) {
-            sound.unloadAsync();
-            soundRef.current = null;
-            setPlayingEntryId(null);
-            setPlaybackProgress(0);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      setPlayingEntryId(null);
-      setPlaybackProgress(0);
-    }
-  };
-
   const { shareEntry, sharingEntryId } = useShareEntry();
   const handleSharePress = (entryId?: string) => shareEntry(entryId);
   const handleLocationPress = () => {};
@@ -176,7 +119,7 @@ export default function DayViewScreen() {
           location={entry.location ?? undefined}
           isPlaying={playingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
-          onPlayPress={() => playAudio(audioMedia?.uri, entry.id)}
+          onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
           onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}

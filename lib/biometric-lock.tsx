@@ -79,49 +79,55 @@ function FingerprintIcon({ size = 64 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M12 2C9.243 2 7 4.243 7 7V10"
+        d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M17 10V7C17 4.243 14.757 2 12 2"
+        d="M14 13.12c0 2.38 0 6.38-1 8.88"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M7 14C7 11.243 9.243 9 12 9C14.757 9 17 11.243 17 14V15"
+        d="M17.29 21.02c.12-2.6.41-4.58 1.71-5.02"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M12 12C13.105 12 14 12.895 14 14V18C14 19.657 15.343 21 17 21"
+        d="M2 12a10 10 0 0 1 18-6"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M10 14V18C10 20.209 8.209 22 6 22"
+        d="M2 12a10 10 0 0 0 4 8"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M3 14C3 9.029 7.029 5 12 5C16.971 5 21 9.029 21 14"
+        d="M20 12c0 2-.17 6-1 8"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M21 17C21 19.761 18.761 22 16 22"
+        d="M5 12c0-1.08.16-3.3 1-4"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
       />
       <Path
-        d="M3 17V14"
+        d="M5.93 20a8.45 8.45 0 0 0 1.07-3"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M8 12a4 4 0 0 1 8 0"
         stroke={TimelineColors.primary}
         strokeWidth={1.5}
         strokeLinecap="round"
