@@ -1,4 +1,6 @@
 import { HubCalendar, HubPanelGrid } from '@/components/hub';
+import { MonthYearPicker } from '@/components/hub/MonthYearPicker';
+import { ConnectTimeline } from '@/components/connect';
 import {
   BadgesSection,
   FoldDataCards,
@@ -7,19 +9,20 @@ import {
   PrivateBadge,
   ProfileAvatar
 } from '@/components/profile';
-import { ShareLoadingOverlay } from '@/components/shares';
+import { ShareLoadingOverlay, ShareSheet } from '@/components/shares';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useProfileStats } from '@/lib/profile-hooks';
 import { useTimeline } from '@/lib/timeline-context';
 import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
+import { getConnectStatus, getConnectMemories, unshareFromConnect, type ConnectActiveConnection } from '@/lib/api';
 import { useHubActivity } from '@/lib/use-hub-activity';
 import { useShareEntry } from '@/lib/use-share-entry';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -74,9 +77,37 @@ export default function MainScreen() {
   // Hub calendar state
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const activityData = useHubActivity(calendarYear, calendarMonth);
-  const { shareEntry, sharingEntryId } = useShareEntry();
+  const { shareEntry, shareEntryAsLink, sharingEntryId, sheetEntryId, dismissSheet, handleShareLink, handleShareConnect } = useShareEntry();
+
+  // Connect timeline toggle state
+  const [connectMode, setConnectMode] = useState(false);
+  const [activeConnection, setActiveConnection] = useState<ConnectActiveConnection | null>(null);
+  const [connectChecked, setConnectChecked] = useState(false);
+  const [sharedEntryIds, setSharedEntryIds] = useState<Set<string>>(new Set());
+
+  // Fetch connect status on mount to know if toggle should be visible
+  React.useEffect(() => {
+    getConnectStatus().then((res) => {
+      if (res.data?.active) {
+        setActiveConnection(res.data.active);
+        // Fetch all shared entry IDs so we know which are already on connect
+        getConnectMemories().then((memRes) => {
+          if (memRes.data?.memories) {
+            const ids = new Set(
+              memRes.data.memories
+                .filter((m) => m.side === 'mine')
+                .map((m) => m.entry.id)
+            );
+            setSharedEntryIds(ids);
+          }
+        });
+      }
+      setConnectChecked(true);
+    });
+  }, []);
 
   const navigateToPage = useCallback((page: number) => {
     const clamped = Math.max(PAGE_HUB, Math.min(PAGE_PROFILE, page));
@@ -117,6 +148,11 @@ export default function MainScreen() {
     } else {
       setCalendarMonth(calendarMonth + 1);
     }
+  };
+
+  const handleMonthYearSelect = (month: number, year: number) => {
+    setCalendarMonth(month);
+    setCalendarYear(year);
   };
 
   // Profile handlers
@@ -200,6 +236,30 @@ export default function MainScreen() {
   const handleLocationPress = () => console.log('Location pressed');
   const handleMoodPress = () => console.log('Mood pressed');
   const handleImagePress = () => console.log('Image pressed');
+
+  const handleRemoveFromConnect = async () => {
+    if (!sheetEntryId) return;
+    const entryId = sheetEntryId;
+    dismissSheet();
+    const result = await unshareFromConnect(entryId);
+    if (result.error) {
+      Alert.alert('Error', result.error);
+    } else {
+      setSharedEntryIds((prev) => {
+        const next = new Set(prev);
+        next.delete(entryId);
+        return next;
+      });
+    }
+  };
+
+  const handleShareConnectAndTrack = () => {
+    const entryId = sheetEntryId;
+    handleShareConnect();
+    if (entryId) {
+      setSharedEntryIds((prev) => new Set(prev).add(entryId));
+    }
+  };
 
   const pagerAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -402,6 +462,7 @@ export default function MainScreen() {
                   activityData={activityData}
                   onPrevMonth={handlePrevMonth}
                   onNextMonth={handleNextMonth}
+                  onMonthYearPress={() => setShowMonthPicker(true)}
                     onDayPress={(day) => {
                       const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                       router.push({ pathname: '/day-view', params: { date: dateStr } });
@@ -412,6 +473,7 @@ export default function MainScreen() {
                   onEmotionsPress={() => router.push('/emotions')}
                   onSharePress={() => router.push('/shares')}
                   onMediaPress={() => router.push('/media')}
+                  onConnectPress={() => router.push('/connect' as any)}
                 />
               </ScrollView>
             </View>
@@ -422,7 +484,14 @@ export default function MainScreen() {
                 dayOfWeek={dayOfWeek}
                 date={date}
                 onProfilePress={handleProfilePress}
+                connectMode={connectMode}
+                onConnectToggle={connectChecked && activeConnection ? () => setConnectMode(!connectMode) : undefined}
               />
+
+              {/* Conditional content: normal timeline or connect timeline */}
+              {connectMode && activeConnection ? (
+                <ConnectTimeline connection={activeConnection} onSharePress={handleSharePress} />
+              ) : (
               <View style={styles.timelineWrapper}>
                 <View style={styles.timelineLine} />
                 <ScrollView
@@ -502,6 +571,7 @@ export default function MainScreen() {
                   )}
                 </ScrollView>
               </View>
+              )}
             </View>
 
             {/* Page 2: Profile */}
@@ -565,8 +635,27 @@ export default function MainScreen() {
         </View>
       </GestureDetector>
 
+      {/* Month/Year picker modal */}
+      <MonthYearPicker
+        visible={showMonthPicker}
+        selectedYear={calendarYear}
+        selectedMonth={calendarMonth}
+        onSelect={handleMonthYearSelect}
+        onClose={() => setShowMonthPicker(false)}
+      />
+
       {/* Share loading overlay */}
       <ShareLoadingOverlay visible={!!sharingEntryId} />
+
+      {/* Custom share bottom sheet */}
+      <ShareSheet
+        visible={!!sheetEntryId}
+        onDismiss={dismissSheet}
+        onShareLink={handleShareLink}
+        onShareConnect={handleShareConnectAndTrack}
+        isSharedToConnect={!!sheetEntryId && sharedEntryIds.has(sheetEntryId)}
+        onRemoveFromConnect={handleRemoveFromConnect}
+      />
 
       {/* Bottom navigation bar - synced with pager */}
       <BottomNavBar

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
-import type { MoodType } from '../mood/MoodPicker';
+import { getMoodIcon } from './MoodIcons';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -60,102 +60,6 @@ function PauseIcon({ size = 36 }: { size?: number }) {
   );
 }
 
-// Small inline mood icons for timeline cards (all 5 moods)
-function VSadSmallIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      {/* Circle face */}
-      <Path
-        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
-        fill="#DCBCBC"
-        stroke="#181717"
-        strokeWidth={0.8}
-      />
-      {/* Sad mouth */}
-      <Path d="M5.5 11c.7-.8 1.5-1 2.5-1s1.8.2 2.5 1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
-      {/* Tears */}
-      <Path d="M4.5 7v3M11.5 7v3" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
-      {/* Eyebrows */}
-      <Path d="M4.5 5.5l1.5.5M11.5 5.5l-1.5.5" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function SadSmallIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      {/* Circle face */}
-      <Path
-        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
-        fill="#E5D4D4"
-        stroke="#181717"
-        strokeWidth={0.8}
-      />
-      {/* Sad mouth */}
-      <Path d="M5.5 11c.7-.8 1.5-1 2.5-1s1.8.2 2.5 1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
-      {/* Eyes */}
-      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
-      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
-    </Svg>
-  );
-}
-
-function NormalSmallIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      {/* Circle face */}
-      <Path
-        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
-        fill="#E5E3D4"
-        stroke="#181717"
-        strokeWidth={0.8}
-      />
-      {/* Neutral mouth */}
-      <Path d="M5.5 10h5" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
-      {/* Eyes */}
-      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
-      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
-    </Svg>
-  );
-}
-
-function HappySmallIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      {/* Circle face */}
-      <Path
-        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
-        fill="#D4E5D5"
-        stroke="#181717"
-        strokeWidth={0.8}
-      />
-      {/* Happy mouth */}
-      <Path d="M5.5 9.5c.7.8 1.5 1 2.5 1s1.8-.2 2.5-1" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
-      {/* Eyes */}
-      <Circle cx="5.5" cy="6.5" r="0.8" fill="#181717" />
-      <Circle cx="10.5" cy="6.5" r="0.8" fill="#181717" />
-    </Svg>
-  );
-}
-
-function VHappySmallIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      {/* Circle face */}
-      <Path
-        d="M8 1C4.134 1 1 4.134 1 8s3.134 7 7 7 7-3.134 7-7-3.134-7-7-7z"
-        fill="#BCDCBE"
-        stroke="#181717"
-        strokeWidth={0.8}
-      />
-      {/* Big smile */}
-      <Path d="M5 9c0 0 1 2.5 3 2.5s3-2.5 3-2.5" stroke="#181717" strokeWidth={0.8} strokeLinecap="round" />
-      {/* Happy eyes (curved) */}
-      <Path d="M4.5 6c.5-.5 1.5-.5 2 0" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
-      <Path d="M9.5 6c.5-.5 1.5-.5 2 0" stroke="#181717" strokeWidth={0.6} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 // Location icon - exact from provided SVG
 function LocationIcon({ size = 16 }: { size?: number }) {
@@ -241,17 +145,7 @@ export function VoiceCard({
   onLocationPress,
   onMoodPress,
 }: VoiceCardProps) {
-  // Map mood types to small inline icons
-  const MOOD_ICONS: Record<MoodType, React.FC<{ size?: number }>> = {
-    'V. Sad': VSadSmallIcon,
-    'Sad': SadSmallIcon,
-    'Normal': NormalSmallIcon,
-    'Happy': HappySmallIcon,
-    'V. Happy': VHappySmallIcon,
-  };
-
-  // Get the appropriate mood icon, fallback to NormalSmallIcon if mood not found
-  const MoodIcon = MOOD_ICONS[mood as MoodType] || NormalSmallIcon;
+  const MoodIcon = getMoodIcon(mood);
 
   return (
     <View style={styles.card}>

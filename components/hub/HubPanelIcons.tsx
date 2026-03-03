@@ -64,9 +64,38 @@ export function LinkIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR }: IconPro
 }
 
 /**
- * Folder Icon - For Media section
- * From designSVG/icons/media-icon.svg
+ * Connect Icon - For Connect section (two people)
  */
+export function ConnectPeopleIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 23 23" fill="none">
+      <Path
+        d="M15 19.5v-1.5a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v1.5"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M9 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M20 19.5v-1.5a3 3 0 0 0-2.25-2.9M14.25 6.1a3 3 0 0 1 0 5.81"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
 export function FolderIcon({ size = DEFAULT_SIZE, color = '#810100' }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 23 23" fill="none">

@@ -500,6 +500,225 @@ export async function getPublicShare(
   }
 }
 
+// =============================================================================
+// Connect API
+// =============================================================================
+
+export interface ConnectPartner {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+export interface ConnectActiveConnection {
+  id: string;
+  status: string;
+  acceptedAt: string | null;
+  partner: ConnectPartner | null;
+}
+
+export interface ConnectPendingRequest {
+  id: string;
+  direction: "sent" | "received";
+  requesterId: string;
+  receiverId: string;
+  requesterName: string;
+  requesterImage: string | null;
+  createdAt: string;
+}
+
+export interface ConnectStatus {
+  active: ConnectActiveConnection | null;
+  pending: ConnectPendingRequest[];
+  cooldown: { until: string } | null;
+}
+
+export interface ConnectMemoryEntry {
+  id: string;
+  type: string;
+  mood: string | null;
+  caption: string | null;
+  content: string | null;
+  title: string | null;
+  storyContent: string | null;
+  pageCount: number | null;
+  createdAt: string;
+  media: Array<{
+    id: string;
+    uri: string;
+    type: string;
+    thumbnailUri: string | null;
+    duration: number | null;
+  }>;
+}
+
+export interface ConnectMemoryItem {
+  id: string;
+  side: "mine" | "theirs";
+  sharedBy: string;
+  sharedAt: string;
+  user: { name: string; image: string | null };
+  entry: ConnectMemoryEntry;
+}
+
+export interface ConnectMemoriesResponse {
+  memories: ConnectMemoryItem[];
+  nextCursor: string | null;
+  partner: { id: string };
+}
+
+export interface ConnectSearchResult {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+/**
+ * Get current connection status (active, pending requests, cooldown)
+ */
+export async function getConnectStatus(): Promise<{
+  data: ConnectStatus | null;
+  error: string | null;
+}> {
+  return apiRequest<ConnectStatus>("/api/connect/status");
+}
+
+/**
+ * Get or generate the current user's invite code
+ */
+export async function getConnectInviteCode(): Promise<{
+  data: { inviteCode: string } | null;
+  error: string | null;
+}> {
+  return apiRequest<{ inviteCode: string }>("/api/connect/code");
+}
+
+/**
+ * Connect using an invite code (auto-accepts)
+ */
+export async function connectByCode(inviteCode: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest("/api/connect/request/code", {
+    method: "POST",
+    body: JSON.stringify({ inviteCode }),
+  });
+}
+
+/**
+ * Send a direct connection request to a user (requires acceptance)
+ */
+export async function connectByUser(userId: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest("/api/connect/request/user", {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/**
+ * Accept a pending connection request
+ */
+export async function acceptConnectRequest(requestId: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest(`/api/connect/accept/${requestId}`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Decline a pending connection request
+ */
+export async function declineConnectRequest(requestId: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest(`/api/connect/decline/${requestId}`, {
+    method: "POST",
+  });
+}
+
+/**
+ * End the current active connection (triggers 30-day cooldown)
+ */
+export async function endConnection(): Promise<{
+  data: { cooldownUntil: string } | null;
+  error: string | null;
+}> {
+  return apiRequest<{ cooldownUntil: string }>("/api/connect/end", {
+    method: "POST",
+  });
+}
+
+/**
+ * Search for users by name or email (for direct connection requests)
+ */
+export async function searchConnectUsers(query: string): Promise<{
+  data: ConnectSearchResult[] | null;
+  error: string | null;
+}> {
+  const result = await apiRequest<ConnectSearchResult[]>(
+    `/api/connect/search?q=${encodeURIComponent(query)}`
+  );
+  if (result.error) return { data: null, error: result.error };
+  const users = Array.isArray(result.data)
+    ? result.data
+    : (result.data as any)?.data ?? [];
+  return { data: users, error: null };
+}
+
+/**
+ * Share a timeline entry to the active connection
+ */
+export async function shareToConnect(entryId: string): Promise<{
+  data: any | null;
+  error: string | null;
+}> {
+  return apiRequest("/api/connect/memories", {
+    method: "POST",
+    body: JSON.stringify({ entryId }),
+  });
+}
+
+/**
+ * Remove a shared entry from the connection timeline
+ */
+export async function unshareFromConnect(entryId: string): Promise<{
+  success: boolean;
+  error: string | null;
+}> {
+  const result = await apiRequest(`/api/connect/memories/${entryId}`, {
+    method: "DELETE",
+  });
+  return {
+    success: result.error === null,
+    error: result.error,
+  };
+}
+
+/**
+ * Get shared memories timeline (cursor-based pagination)
+ */
+export async function getConnectMemories(
+  cursor?: string,
+  limit: number = 20
+): Promise<{
+  data: ConnectMemoriesResponse | null;
+  error: string | null;
+}> {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  params.set("limit", String(limit));
+  return apiRequest<ConnectMemoriesResponse>(
+    `/api/connect/memories?${params.toString()}`
+  );
+}
+
 /**
  * Upload a media file (photo, video, audio). Returns the remote URL.
  */

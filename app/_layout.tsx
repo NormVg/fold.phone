@@ -121,6 +121,7 @@ function RootLayoutNav() {
             <Stack.Screen name="day-view" />
             <Stack.Screen name="emotions" />
             <Stack.Screen name="shares" />
+            <Stack.Screen name="connect" />
             <Stack.Screen name="entry-story" />
             <Stack.Screen name="entry-audio" options={{ presentation: 'modal' }} />
             <Stack.Screen name="entry-text" options={{ presentation: 'modal' }} />

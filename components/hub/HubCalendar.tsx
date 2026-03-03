@@ -99,6 +99,7 @@ interface HubCalendarProps {
   onPrevMonth?: () => void;
   onNextMonth?: () => void;
   onDayPress?: (day: number) => void;
+  onMonthYearPress?: () => void;
 }
 
 export function HubCalendar({
@@ -108,6 +109,7 @@ export function HubCalendar({
   onPrevMonth,
   onNextMonth,
   onDayPress,
+  onMonthYearPress,
 }: HubCalendarProps) {
 
   const today = new Date();
@@ -190,7 +192,13 @@ export function HubCalendar({
           <ChevronLeft />
         </TouchableOpacity>
 
-        <Text style={styles.monthText}>{monthYear}</Text>
+        <TouchableOpacity
+          onPress={onMonthYearPress}
+          activeOpacity={0.6}
+          hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+        >
+          <Text style={styles.monthText}>{monthYear}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleNext}
