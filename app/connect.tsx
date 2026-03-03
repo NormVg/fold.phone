@@ -84,11 +84,15 @@ export default function ConnectScreen() {
   const router = useRouter();
   const [status, setStatus] = useState<ConnectStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    setError(null);
     const result = await getConnectStatus();
     if (result.data) {
       setStatus(result.data);
+    } else {
+      setError(result.error ?? 'Failed to load connection status.');
     }
     setLoading(false);
   }, []);
@@ -164,6 +168,13 @@ export default function ConnectScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={TimelineColors.primary} />
         </View>
+      ) : error ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable style={styles.retryButton} onPress={() => { setLoading(true); fetchStatus(); }}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        </View>
       ) : hasActiveConnection ? (
         <ConnectTimeline connection={status!.active!} />
       ) : (
@@ -225,5 +236,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 15 * SCALE,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16 * SCALE,
+    paddingHorizontal: 24 * SCALE,
+  },
+  retryButton: {
+    backgroundColor: TimelineColors.primary,
+    paddingHorizontal: 28 * SCALE,
+    paddingVertical: 12 * SCALE,
+    borderRadius: 12 * SCALE,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 15 * SCALE,
+    fontWeight: '600',
   },
 });

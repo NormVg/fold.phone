@@ -128,6 +128,10 @@ export function ConnectSetup({ status, onConnected }: ConnectSetupProps) {
     setLoadingCode(false);
   };
 
+  // Guard — status should always be present when ConnectSetup is rendered,
+  // but protect against any timing edge cases
+  if (!status) return null;
+
   // Debounced search
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
