@@ -2,9 +2,10 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import * as NavigationBar from 'expo-navigation-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as ScreenCapture from 'expo-screen-capture';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -42,6 +43,53 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, user?.id]);
 
   return <>{children}</>;
+}
+
+// Excluded route segments where screenshots are always allowed
+const EXCLUDED_ROOTS = new Set(['onboarding', 'auth', 'signup']);
+
+// Reactively enables/disables screen capture based on the current route and
+// the user's screenshotProtection preference.
+function ScreenCaptureGuard() {
+  const screenshotProtection = useSettingsStore((s) => s.screenshotProtection);
+  const segments = useSegments();
+  const activeRef = useRef(false);
+
+  useEffect(() => {
+    const root = segments[0] as string | undefined;
+    const isSettingsTab = root === '(tabs)' && segments[1] === 'settings';
+    const isExcluded = !root || EXCLUDED_ROOTS.has(root) || isSettingsTab;
+
+    const shouldProtect = screenshotProtection && !isExcluded;
+
+    if (shouldProtect && !activeRef.current) {
+      activeRef.current = true;
+      ScreenCapture.preventScreenCaptureAsync('fold_guard');
+      if (Platform.OS === 'ios') {
+        ScreenCapture.enableAppSwitcherProtectionAsync(0.5);
+      }
+    } else if (!shouldProtect && activeRef.current) {
+      activeRef.current = false;
+      ScreenCapture.allowScreenCaptureAsync('fold_guard');
+      if (Platform.OS === 'ios') {
+        ScreenCapture.disableAppSwitcherProtectionAsync();
+      }
+    }
+  }, [screenshotProtection, segments]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (activeRef.current) {
+        ScreenCapture.allowScreenCaptureAsync('fold_guard');
+        if (Platform.OS === 'ios') {
+          ScreenCapture.disableAppSwitcherProtectionAsync();
+        }
+      }
+    };
+  }, []);
+
+  return null;
 }
 
 // Protected route wrapper
@@ -126,6 +174,7 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScreenCaptureGuard />
       <KeyboardProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack screenOptions={{ headerShown: false }}>

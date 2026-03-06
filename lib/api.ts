@@ -737,6 +737,7 @@ export async function getConnectMemories(
 
 export interface UserSettings {
   autoLocation: boolean;
+  screenshotProtection: boolean;
 }
 
 /**

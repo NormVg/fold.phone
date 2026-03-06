@@ -31,8 +31,8 @@ module.exports = {
   // Credits
   // =============================================================================
   credits: {
-    builtWith: 'React Native & Expo',
-    madeBy: 'TheAlphaOnes',
+    builtWith: 'Love ❤️',
+    madeBy: 'TheAlphaOnes Studio',
     footerMessage: 'Made with love for mindful journaling',
   },
 

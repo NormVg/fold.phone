@@ -12,6 +12,7 @@ import { useAuthStore } from './auth-store';
 interface SettingsState {
   // User preferences (synced to backend)
   autoLocation: boolean;
+  screenshotProtection: boolean;
   isSettingsLoading: boolean;
 
   // App config (from backend, read-only)
@@ -23,6 +24,7 @@ interface SettingsState {
 
   // Actions
   updateAutoLocation: (value: boolean) => Promise<void>;
+  updateScreenshotProtection: (value: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   /** Called from StoreInitializer when auth state changes */
   loadAll: () => Promise<void>;
@@ -30,6 +32,7 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   autoLocation: false,
+  screenshotProtection: true,
   isSettingsLoading: true,
   appConfig: null,
   profileStats: null,
@@ -57,7 +60,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     ]);
 
     if (settingsResult.data) {
-      set({ autoLocation: settingsResult.data.autoLocation });
+      set({
+        autoLocation: settingsResult.data.autoLocation,
+        screenshotProtection: settingsResult.data.screenshotProtection,
+      });
     }
     set({ isSettingsLoading: false });
 
@@ -76,6 +82,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Revert on failure
       set({ autoLocation: prev });
       console.error('Failed to update autoLocation setting:', result.error);
+    }
+  },
+
+  updateScreenshotProtection: async (value: boolean) => {
+    const prev = get().screenshotProtection;
+    // Optimistic update
+    set({ screenshotProtection: value });
+    const result = await updateUserSettings({ screenshotProtection: value });
+    if (result.error) {
+      // Revert on failure
+      set({ screenshotProtection: prev });
+      console.error('Failed to update screenshotProtection setting:', result.error);
     }
   },
 

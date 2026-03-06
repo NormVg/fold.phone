@@ -29,6 +29,8 @@ export default function SettingsScreen() {
   const {
     autoLocation,
     updateAutoLocation,
+    screenshotProtection,
+    updateScreenshotProtection,
     isSettingsLoading,
     profileStats,
     isStatsLoading,
@@ -36,6 +38,7 @@ export default function SettingsScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
   const [isTogglingLocation, setIsTogglingLocation] = useState(false);
+  const [isTogglingScreenshot, setIsTogglingScreenshot] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -69,6 +72,18 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Could not update location setting. Please try again.');
     } finally {
       setIsTogglingLocation(false);
+    }
+  };
+
+  const handleToggleScreenshot = async () => {
+    if (isTogglingScreenshot || isSettingsLoading) return;
+    setIsTogglingScreenshot(true);
+    try {
+      await updateScreenshotProtection(!screenshotProtection);
+    } catch {
+      Alert.alert('Error', 'Could not update screenshot protection. Please try again.');
+    } finally {
+      setIsTogglingScreenshot(false);
     }
   };
 
@@ -204,6 +219,25 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+            <Divider />
+            <View style={styles.settingsRow}>
+              <View style={styles.rowLeft}>
+                <ScreenshotIcon size={20 * SCALE} />
+                <View>
+                  <Text style={styles.rowLabel}>Screenshot Protection</Text>
+                  <Text style={styles.rowSubLabel}>
+                    Prevent screenshots and screen recording
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={screenshotProtection}
+                onValueChange={handleToggleScreenshot}
+                disabled={isTogglingScreenshot || isSettingsLoading}
+                trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.35)' }}
+                thumbColor={screenshotProtection ? TimelineColors.primary : '#f4f3f4'}
+              />
+            </View>
           </View>
         </View>
 
@@ -500,6 +534,28 @@ function LocationSettingsIcon({ size = 20 }: { size?: number }) {
       <Path
         d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
         fill={TimelineColors.primary}
+      />
+    </Svg>
+  );
+}
+
+function ScreenshotIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Eye-off icon */}
+      <Path
+        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M1 1L23 23"
+        stroke={TimelineColors.primary}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </Svg>
   );
