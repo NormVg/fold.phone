@@ -17,9 +17,10 @@ import type { MoodType } from '@/components/mood';
 import { TimelineColors } from '@/constants/theme';
 import { useTimeline, type TimelineEntry } from '@/lib/timeline-context';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -45,8 +46,14 @@ function BackIcon({ size = 24 }: { size?: number }) {
 
 export default function EmotionsScreen() {
   const router = useRouter();
-  const { entries } = useTimeline();
+  const { entries, refreshEntries } = useTimeline();
   const [period, setPeriod] = useState<PeriodKey>('30D');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refreshEntries(); } finally { setRefreshing(false); }
+  }, [refreshEntries]);
 
   const filteredEntries = useMemo(() => {
     const days = getDaysForPeriod(period);
@@ -123,6 +130,14 @@ export default function EmotionsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={TimelineColors.primary}
+            colors={[TimelineColors.primary]}
+          />
+        }
       >
         <DurationPicker selected={period} onSelect={setPeriod} />
         <MoodTrendGraph dayMoods={dayMoods} periodLabel={periodLabel} />

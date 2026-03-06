@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -42,6 +43,7 @@ export default function DayViewScreen() {
 
   const [entries, setEntries] = useState<TimelineEntryResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Audio playback — global store (one audio at a time, stops on screen blur)
   const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId } = useAudio();
@@ -88,6 +90,11 @@ export default function DayViewScreen() {
 
   useEffect(() => {
     fetchEntries();
+  }, [fetchEntries]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await fetchEntries(); } finally { setRefreshing(false); }
   }, [fetchEntries]);
 
   const { shareEntry, sharingEntryId } = useShareEntry();
@@ -246,6 +253,14 @@ export default function DayViewScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={TimelineColors.primary}
+              colors={[TimelineColors.primary]}
+            />
+          }
         >
           {/* Entry count badge */}
           {!isLoading && entries.length > 0 && (

@@ -3,10 +3,11 @@ import { TimelineColors } from '@/constants/theme';
 import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Dimensions,
   Pressable,
+  RefreshControl,
   SectionList,
   StatusBar,
   StyleSheet,
@@ -136,9 +137,15 @@ function FilterPill({
 
 export default function MediaScreen() {
   const router = useRouter();
-  const { entries } = useTimeline();
+  const { entries, refreshEntries } = useTimeline();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [selectedMedia, setSelectedMedia] = useState<MediaItemDisplay | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refreshEntries(); } finally { setRefreshing(false); }
+  }, [refreshEntries]);
 
   // Extract, filter, and group media items
   const sections = useMemo(() => {
@@ -326,6 +333,14 @@ export default function MediaScreen() {
         contentContainerStyle={styles.gridContent}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={TimelineColors.primary}
+            colors={[TimelineColors.primary]}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No media found.</Text>

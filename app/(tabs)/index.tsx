@@ -22,8 +22,10 @@ import { getConnectStatus, getConnectMemories, unshareFromConnect, type ConnectA
 import { useHubActivity } from '@/lib/use-hub-activity';
 import { useShareEntry } from '@/lib/use-share-entry';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSettings } from '@/lib/store/settings-store';
+import { useTimelineStore } from '@/lib/store/timeline-store';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Dimensions, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -89,6 +91,29 @@ export default function MainScreen() {
   const [activeConnection, setActiveConnection] = useState<ConnectActiveConnection | null>(null);
   const [connectChecked, setConnectChecked] = useState(false);
   const [sharedEntryIds, setSharedEntryIds] = useState<Set<string>>(new Set());
+
+  // Pull-to-refresh states (one per page)
+  const [hubRefreshing, setHubRefreshing] = useState(false);
+  const [timelineRefreshing, setTimelineRefreshing] = useState(false);
+  const [profileRefreshing, setProfileRefreshing] = useState(false);
+  const { refresh: refreshSettings } = useSettings();
+
+  const onHubRefresh = useCallback(async () => {
+    setHubRefreshing(true);
+    try { await refreshEntries(); } finally { setHubRefreshing(false); }
+  }, [refreshEntries]);
+
+  const onTimelineRefresh = useCallback(async () => {
+    setTimelineRefreshing(true);
+    try {
+      await Promise.all([refreshEntries(), useTimelineStore.getState().fetchOnThisDay()]);
+    } finally { setTimelineRefreshing(false); }
+  }, [refreshEntries]);
+
+  const onProfileRefresh = useCallback(async () => {
+    setProfileRefreshing(true);
+    try { await Promise.all([refreshEntries(), refreshSettings()]); } finally { setProfileRefreshing(false); }
+  }, [refreshEntries, refreshSettings]);
 
   // Fetch connect status on mount to know if toggle should be visible
   React.useEffect(() => {
@@ -415,6 +440,14 @@ export default function MainScreen() {
                 style={styles.pageContent}
                 contentContainerStyle={styles.hubScrollContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={hubRefreshing}
+                    onRefresh={onHubRefresh}
+                    tintColor={TimelineColors.primary}
+                    colors={[TimelineColors.primary]}
+                  />
+                }
               >
                 <HubCalendar
                   year={calendarYear}
@@ -458,6 +491,14 @@ export default function MainScreen() {
                   style={styles.pageContent}
                   contentContainerStyle={styles.timelineScrollContent}
                   showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={timelineRefreshing}
+                      onRefresh={onTimelineRefresh}
+                      tintColor={TimelineColors.primary}
+                      colors={[TimelineColors.primary]}
+                    />
+                  }
                 >
                   {/* ── Section A: Today's entries ── */}
                   {todayEntries.map((entry) => (
@@ -550,6 +591,14 @@ export default function MainScreen() {
                 style={styles.pageContent}
                 contentContainerStyle={styles.profileScrollContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={profileRefreshing}
+                    onRefresh={onProfileRefresh}
+                    tintColor={TimelineColors.primary}
+                    colors={[TimelineColors.primary]}
+                  />
+                }
               >
                 <View style={styles.avatarSection}>
                   <ProfileAvatar

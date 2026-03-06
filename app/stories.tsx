@@ -1,10 +1,11 @@
 import { TimelineColors } from '@/constants/theme';
 import { getMoodIcon, HappySmallIcon } from '@/components/timeline/MoodIcons';
 import { useRouter, type Href } from 'expo-router';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Dimensions,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -237,7 +238,13 @@ function StoryListItem({ story, onPress }: { story: TimelineEntry; onPress: () =
 
 export default function StoriesScreen() {
   const router = useRouter();
-  const { entries } = useTimeline();
+  const { entries, refreshEntries } = useTimeline();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refreshEntries(); } finally { setRefreshing(false); }
+  }, [refreshEntries]);
 
   // Filter for story types only
   const stories = React.useMemo(() => {
@@ -281,6 +288,14 @@ export default function StoriesScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={TimelineColors.primary}
+            colors={[TimelineColors.primary]}
+          />
+        }
       >
         {/* Insights Section */}
         <InsightsCard stories={stories} />

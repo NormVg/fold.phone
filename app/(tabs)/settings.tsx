@@ -3,12 +3,13 @@ import { useAuth } from '@/lib/auth-context';
 import { useBiometricLock } from '@/lib/biometric-lock';
 import { useSettings } from '@/lib/settings-context';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Dimensions,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -34,11 +35,18 @@ export default function SettingsScreen() {
     isSettingsLoading,
     profileStats,
     isStatsLoading,
+    refresh: refreshSettings,
   } = useSettings();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
   const [isTogglingLocation, setIsTogglingLocation] = useState(false);
   const [isTogglingScreenshot, setIsTogglingScreenshot] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refreshSettings(); } finally { setRefreshing(false); }
+  }, [refreshSettings]);
 
   const handleBack = () => {
     router.back();
@@ -131,6 +139,14 @@ export default function SettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={TimelineColors.primary}
+            colors={[TimelineColors.primary]}
+          />
+        }
       >
         {/* Your Fold Stats Section */}
         {(profileStats || isStatsLoading) && (
