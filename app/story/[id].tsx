@@ -1,8 +1,8 @@
 import { ShareLoadingOverlay } from '@/components/shares';
 import { useShareEntry } from '@/lib/use-share-entry';
 import { useTimeline } from '@/lib/timeline-context';
-import { ResizeMode, Video } from 'expo-av';
 import { Image as ExpoImage } from 'expo-image';
+import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -123,6 +123,21 @@ function calculateReadTime(content: string): string {
   const words = content.trim().split(/\s+/).length;
   const minutes = Math.ceil(words / wordsPerMinute);
   return `${minutes} min read`;
+}
+
+/** Video player for story fullscreen modal using expo-av */
+function StoryVideoPlayer({ uri, shouldPlay, videoRef }: { uri: string; shouldPlay: boolean; videoRef?: (ref: Video | null) => void }) {
+  return (
+    <Video
+      ref={videoRef}
+      source={{ uri }}
+      style={styles.fullscreenMedia}
+      useNativeControls
+      resizeMode={ResizeMode.CONTAIN}
+      shouldPlay={shouldPlay}
+      isLooping
+    />
+  );
 }
 
 export default function StoryScreen() {
@@ -327,13 +342,9 @@ export default function StoryScreen() {
               {entry.media.map((media, index) => (
                 <View key={index} style={styles.fullscreenMediaContainer}>
                   {media.type === 'video' ? (
-                    <Video
-                      source={{ uri: media.uri }}
-                      style={styles.fullscreenMedia}
-                      resizeMode={ResizeMode.CONTAIN}
+                    <StoryVideoPlayer
+                      uri={media.uri}
                       shouldPlay={isFullscreen && index === activeMediaIndex}
-                      isLooping
-                      useNativeControls
                     />
                   ) : (
                     <ExpoImage

@@ -125,7 +125,7 @@ export function StoryCard({
   title,
   content,
   time = '03:34 PM',
-  mood = 'HAPPY',
+  mood = 'Happy',
   location,
   pageCount,
   readTime,

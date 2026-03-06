@@ -12,20 +12,9 @@ import {
   Text,
   View
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SCALE = SCREEN_WIDTH / 393;
-
-// Icons logic reused
-function VideoIcon({ size = 20 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M8 5V19L19 12L8 5Z" fill="white" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
 
 interface CommonMediaItem {
   id: string;
@@ -57,7 +46,6 @@ export function UnifiedMediaViewer({
 
   // Pause videos when closing
   const handleClose = async () => {
-    // Pause all videos
     for (const key in videoRefs.current) {
       const video = videoRefs.current[key];
       if (video) {
@@ -85,7 +73,7 @@ export function UnifiedMediaViewer({
       <View style={styles.modalContainer}>
         {/* Close button */}
         <Pressable style={styles.closeButton} onPress={handleClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
+          <Text style={styles.closeButtonText}>{'\u2715'}</Text>
         </Pressable>
 
         {/* Swipeable List */}
@@ -118,7 +106,7 @@ export function UnifiedMediaViewer({
                 <Image
                   source={{ uri: item.uri }}
                   style={styles.fullscreenImage}
-                  contentFit="contain" // Ensures we see the whole image
+                  contentFit="contain"
                   transition={200}
                 />
               )}
@@ -138,7 +126,7 @@ export function UnifiedMediaViewer({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.98)', // Slightly darker for immersion
+    backgroundColor: 'rgba(0, 0, 0, 0.98)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -146,7 +134,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
-    zIndex: 20, // Higher than video controls
+    zIndex: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -164,17 +152,17 @@ const styles = StyleSheet.create({
   },
   fullscreenItemContainer: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT, // Full height
+    height: SCREEN_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
   fullscreenImage: {
-    width: SCREEN_WIDTH - 24, // Horizontal padding
+    width: SCREEN_WIDTH - 24,
     height: SCREEN_HEIGHT - 120,
-    borderRadius: 12, // Soften edges
+    borderRadius: 12,
   },
   videoWrapper: {
-    width: SCREEN_WIDTH - 24, // Horizontal padding
+    width: SCREEN_WIDTH - 24,
     height: SCREEN_HEIGHT - 120,
     justifyContent: 'center',
     alignItems: 'center',
@@ -182,7 +170,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fullscreenVideo: {
-    width: '100%', // Match wrapper width
+    width: '100%',
     height: '100%',
   },
   counterContainer: {

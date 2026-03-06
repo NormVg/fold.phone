@@ -1,4 +1,5 @@
 import { TimelineColors } from '@/constants/theme';
+import { getMoodIcon, HappySmallIcon } from '@/components/timeline/MoodIcons';
 import { useRouter, type Href } from 'expo-router';
 import React from 'react';
 import {
@@ -127,28 +128,6 @@ function CalendarIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-function HappyIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" stroke="#4CAF50" strokeWidth={2} />
-      <Path d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14" stroke="#4CAF50" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 9H9.01" stroke="#4CAF50" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M15 9H15.01" stroke="#4CAF50" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function SadIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="10" stroke="#F44336" strokeWidth={2} />
-      <Path d="M16 16C16 16 14.5 14 12 14C9.5 14 8 16 8 16" stroke="#F44336" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 9H9.01" stroke="#F44336" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M15 9H15.01" stroke="#F44336" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
 // ============== TYPES ==============
 
 import { useTimeline, type TimelineEntry } from '@/lib/timeline-context';
@@ -165,12 +144,6 @@ function isHappyMood(mood: string | null | undefined): boolean {
   if (!mood) return false;
   const m = mood.toLowerCase();
   return m.includes('happy') || m === 'normal'; // Count normal as positive/neutral
-}
-
-function isSadMood(mood: string | null | undefined): boolean {
-  if (!mood) return false;
-  const m = mood.toLowerCase();
-  return m.includes('sad');
 }
 
 
@@ -215,7 +188,7 @@ function InsightsCard({ stories }: { stories: TimelineEntry[] }) {
       </View>
 
       <View style={styles.moodInsight}>
-        <HappyIcon size={16 * SCALE} />
+        <HappySmallIcon size={16 * SCALE} />
         <Text style={styles.moodInsightText}>
           {happyPercentage}% of your stories have a positive mood
         </Text>
@@ -225,9 +198,7 @@ function InsightsCard({ stories }: { stories: TimelineEntry[] }) {
 }
 
 function StoryListItem({ story, onPress }: { story: TimelineEntry; onPress: () => void }) {
-  const isHappy = isHappyMood(story.mood);
-  const isSad = isSadMood(story.mood);
-  const MoodIcon = isHappy ? HappyIcon : isSad ? SadIcon : HappyIcon; // Default to Happy if unknown
+  const MoodIcon = story.mood ? getMoodIcon(story.mood) : null;
 
   const content = story.storyContent || story.content || '';
   const wordCount = getWordCount(content);
@@ -241,7 +212,7 @@ function StoryListItem({ story, onPress }: { story: TimelineEntry; onPress: () =
     <Pressable style={styles.storyItem} onPress={onPress}>
       <View style={styles.storyItemHeader}>
         <Text style={styles.storyItemTitle} numberOfLines={1}>{story.title || 'Untitled Story'}</Text>
-        <MoodIcon size={18 * SCALE} />
+        {MoodIcon && <MoodIcon size={18 * SCALE} />}
       </View>
 
       <Text style={styles.storyItemPreview} numberOfLines={2}>

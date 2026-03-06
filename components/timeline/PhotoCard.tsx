@@ -68,7 +68,7 @@ export function PhotoCard({
   time = '03:34 PM',
   imageUri,
   imageUris,
-  mood = 'SAD',
+  mood = 'Sad',
   location,
   onImagePress,
   onSharePress,

@@ -3,7 +3,8 @@
  * Fetches storage config from the backend on first use,
  * then uploads via the official react-native-appwrite SDK.
  */
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Client, ID, Permission, Role, Storage } from 'react-native-appwrite';
 import { apiRequest } from './api';
 
@@ -69,19 +70,49 @@ function guessMimeType(uri: string): string {
 }
 
 /**
+ * Compress an image before upload.
+ * Resizes to max 1920px on longest side and compresses to JPEG 0.7.
+ * Returns the compressed file URI (or original if compression fails/skips).
+ */
+async function compressImage(uri: string): Promise<string> {
+  // Skip non-image URIs
+  const ext = uri.split('.').pop()?.toLowerCase() || '';
+  const imageExts = ['jpg', 'jpeg', 'png', 'heic', 'webp'];
+  if (!imageExts.includes(ext)) return uri;
+
+  try {
+    const result = await manipulateAsync(
+      uri,
+      [{ resize: { width: 1920 } }],
+      { compress: 0.7, format: SaveFormat.JPEG },
+    );
+    console.log('[Appwrite] Compressed image:', uri.split('/').pop(), '→', result.uri.split('/').pop());
+    return result.uri;
+  } catch (err) {
+    console.warn('[Appwrite] Image compression failed, using original:', err);
+    return uri;
+  }
+}
+
+/**
  * Upload a local file directly to Appwrite Storage.
  * Returns the public view URL on success.
- * Includes retry logic for large files (videos/audio).
+ * Compresses images before upload. Includes retry logic for large files.
  */
 export async function uploadToAppwrite(localUri: string): Promise<string> {
   const { storage, bucketId } = await getStorage();
-  const filename = localUri.split('/').pop() || 'file';
   const mimeType = guessMimeType(localUri);
 
+  // Compress images before upload (reduces 3-5 MB → 300-500 KB)
+  const isImage = mimeType.startsWith('image/');
+  const uploadUri = isImage ? await compressImage(localUri) : localUri;
+
+  const filename = uploadUri.split('/').pop() || 'file';
+
   // Validate that the file exists before attempting upload
-  const info = await FileSystem.getInfoAsync(localUri);
+  const info = await FileSystem.getInfoAsync(uploadUri);
   if (!info.exists) {
-    throw new Error(`[Appwrite] File does not exist at path: ${localUri}`);
+    throw new Error(`[Appwrite] File does not exist at path: ${uploadUri}`);
   }
 
   const fileSize = ('size' in info && info.size) ? info.size : 0;
@@ -94,9 +125,9 @@ export async function uploadToAppwrite(localUri: string): Promise<string> {
   }
 
   const file = {
-    uri: localUri,
+    uri: uploadUri,
     name: filename,
-    type: mimeType,
+    type: isImage ? 'image/jpeg' : mimeType, // compressed images are always JPEG
     size: fileSize,
   };
 

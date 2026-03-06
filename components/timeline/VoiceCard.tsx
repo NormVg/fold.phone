@@ -137,7 +137,7 @@ export function VoiceCard({
   title = 'Recording',
   time = '03:34 PM',
   duration = '03:34',
-  mood = 'SAD',
+  mood = 'Sad',
   location,
   isPlaying = false,
   isLoading = false,

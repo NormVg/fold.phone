@@ -161,19 +161,22 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const uploadedMedia: CreateEntryPayload['media'] = [];
 
       if (entry.media && entry.media.length > 0) {
-        for (const m of entry.media) {
-          const remoteUri = await ensureRemoteUri(m.uri);
-          const remoteThumbnail = m.thumbnailUri
-            ? await ensureRemoteUri(m.thumbnailUri)
-            : undefined;
-
-          uploadedMedia.push({
-            uri: remoteUri,
-            type: m.type,
-            thumbnailUri: remoteThumbnail || null,
-            duration: m.duration || null,
-          });
-        }
+        // Upload all media files in parallel for speed
+        const uploadResults = await Promise.all(
+          entry.media.map(async (m) => {
+            const remoteUri = await ensureRemoteUri(m.uri);
+            const remoteThumbnail = m.thumbnailUri
+              ? await ensureRemoteUri(m.thumbnailUri)
+              : undefined;
+            return {
+              uri: remoteUri,
+              type: m.type,
+              thumbnailUri: remoteThumbnail || null,
+              duration: m.duration || null,
+            };
+          }),
+        );
+        uploadedMedia.push(...uploadResults);
       }
 
       // 2. Build payload

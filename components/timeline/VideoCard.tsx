@@ -83,7 +83,7 @@ export function VideoCard({
   duration = '01:24',
   thumbnailUri,
   videoUri,
-  mood = 'HAPPY',
+  mood = 'Happy',
   location,
   onPlayPress,
   onSharePress,

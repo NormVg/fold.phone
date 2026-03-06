@@ -93,7 +93,25 @@ export const MOOD_ICONS: Record<MoodType, React.FC<{ size?: number }>> = {
   'V. Happy': VHappySmallIcon,
 };
 
+/** Normalise a mood string to MoodType casing (e.g. "happy" → "Happy", "v. sad" → "V. Sad") */
+function normaliseMood(raw: string): MoodType | undefined {
+  const lower = raw.trim().toLowerCase();
+  const map: Record<string, MoodType> = {
+    'v. sad': 'V. Sad',
+    'vsad': 'V. Sad',
+    'v.sad': 'V. Sad',
+    'sad': 'Sad',
+    'normal': 'Normal',
+    'happy': 'Happy',
+    'v. happy': 'V. Happy',
+    'vhappy': 'V. Happy',
+    'v.happy': 'V. Happy',
+  };
+  return map[lower];
+}
+
 /** Get the mood icon component for a given mood string. Falls back to NormalSmallIcon. */
 export function getMoodIcon(mood: string): React.FC<{ size?: number }> {
-  return MOOD_ICONS[mood as MoodType] || NormalSmallIcon;
+  const key = normaliseMood(mood);
+  return key ? MOOD_ICONS[key] : NormalSmallIcon;
 }
