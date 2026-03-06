@@ -320,40 +320,41 @@ export default function NewMemoryScreen() {
     };
   }, []);
 
-  // Auto-attach location on mount if the setting is enabled
+  // Auto-attach location after mic permission is resolved to avoid iOS
+  // suppressing the location dialog when two permission prompts fire at once.
   useEffect(() => {
-    if (autoLocation) {
-      (async () => {
-        try {
-          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-          if (status !== 'granted') return;
+    if (!permissionGranted || !autoLocation) return;
 
-          const position = await ExpoLocation.getCurrentPositionAsync({
-            accuracy: ExpoLocation.Accuracy.Balanced,
-          });
+    (async () => {
+      try {
+        const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
 
-          const addresses = await ExpoLocation.reverseGeocodeAsync({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
+        const position = await ExpoLocation.getCurrentPositionAsync({
+          accuracy: ExpoLocation.Accuracy.Balanced,
+        });
 
-          if (addresses.length > 0) {
-            const addr = addresses[0];
-            const locationName =
-              addr.city ||
-              addr.subregion ||
-              addr.region ||
-              `${addr.street || ''} ${addr.name || ''}`.trim() ||
-              `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
-            setLocation(locationName);
-          }
-        } catch (err) {
-          console.warn('Auto-location failed silently:', err);
+        const addresses = await ExpoLocation.reverseGeocodeAsync({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+
+        if (addresses.length > 0) {
+          const addr = addresses[0];
+          const locationName =
+            addr.city ||
+            addr.subregion ||
+            addr.region ||
+            `${addr.street || ''} ${addr.name || ''}`.trim() ||
+            `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+          setLocation(locationName);
         }
-      })();
-    }
+      } catch (err) {
+        console.warn('Auto-location failed silently:', err);
+      }
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoLocation]);
+  }, [permissionGranted, autoLocation]);
 
   const stopAllTimers = () => {
     if (timerRef.current) {

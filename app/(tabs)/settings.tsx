@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -481,62 +482,15 @@ function LogoutIcon({ size = 20 }: { size?: number }) {
 
 function FingerprintSettingsIcon({ size = 20 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M14 13.12c0 2.38 0 6.38-1 8.88"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M17.29 21.02c.12-2.6.41-4.58 1.71-5.02"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M2 12a10 10 0 0 1 18-6"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M2 12a10 10 0 0 0 4 8"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M20 12c0 2-.17 6-1 8"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M5 12c0-1.08.16-3.3 1-4"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M5.93 20a8.45 8.45 0 0 0 1.07-3"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M8 12a4 4 0 0 1 8 0"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-    </Svg>
+    <Image
+      source={require('@/assets/images/fingerprint-pattern-1.png')}
+      style={{
+        width: size,
+        height: size,
+        tintColor: TimelineColors.primary,
+      }}
+      resizeMode="contain"
+    />
   );
 }
 

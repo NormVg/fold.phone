@@ -61,11 +61,13 @@ export const useBiometricLock = () => useContext(BiometricLockContext);
 
 async function getBiometricType(): Promise<string | null> {
   const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-    return 'Face ID';
-  }
+  // Prefer fingerprint on Android — many Android devices report both face and
+  // fingerprint, but fingerprint is typically the primary biometric.
   if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
     return 'Fingerprint';
+  }
+  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    return 'Face ID';
   }
   if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
     return 'Iris';
