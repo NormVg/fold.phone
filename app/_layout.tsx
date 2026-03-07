@@ -15,7 +15,6 @@ import 'react-native-url-polyfill/auto';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BiometricLockProvider } from '@/lib/biometric-lock';
 import { useAuthStore } from '@/lib/store/auth-store';
-import { useNotificationStore } from '@/lib/store/notification-store';
 import { useSettingsStore } from '@/lib/store/settings-store';
 import { useTimelineStore } from '@/lib/store/timeline-store';
 
@@ -50,14 +49,9 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
     if (isAuthenticated) {
       authResolvedRef.current = true;
       useSettingsStore.getState().loadAll();
-      // Connect to Ably for realtime notifications
-      if (user?.id) {
-        useNotificationStore.getState().connect(user.id);
-      }
     } else if (authResolvedRef.current) {
       // User logged out — reload to reset settings
       useSettingsStore.getState().loadAll();
-      useNotificationStore.getState().disconnect();
     }
   }, [isAuthenticated, user?.id]);
 
@@ -148,9 +142,9 @@ function ScreenCaptureGuard() {
   useEffect(() => {
     return () => {
       if (activeRef.current) {
-        ScreenCapture.allowScreenCaptureAsync('fold_guard').catch(() => { });
+        ScreenCapture.allowScreenCaptureAsync('fold_guard').catch(() => {});
         if (Platform.OS === 'ios') {
-          ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => { });
+          ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => {});
         }
       }
     };

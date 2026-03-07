@@ -1,6 +1,5 @@
 import { CaptureAddIcon, GridIcon, HomeIcon, ProfileIcon } from '@/components/icons';
 import { TimelineColors } from '@/constants/theme';
-import { useNotificationStore } from '@/lib/store/notification-store';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -47,7 +46,6 @@ export function BottomNavBar({
   const isHubActive = activeTab === 'hub';
   const isProfileActive = activeTab === 'profile';
   const isTimeline = activeTab === 'timeline';
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   // 0 = home icon, 1 = capture icon
   const progress = useSharedValue(isTimeline ? 1 : 0);
@@ -227,13 +225,6 @@ export function BottomNavBar({
             size={22 * SCALE}
             color={TimelineColors.primary}
           />
-          {unreadCount > 0 && (
-            <View style={styles.notifBadge}>
-              <Text style={styles.notifBadgeText}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Text>
-            </View>
-          )}
         </Pressable>
 
         {/* Center button: gesture-enabled crossfade between Entry and Home */}
@@ -361,22 +352,5 @@ const styles = StyleSheet.create({
     fontSize: 13 * SCALE,
     fontWeight: '600',
     letterSpacing: 0.3,
-  },
-  notifBadge: {
-    position: 'absolute',
-    top: -2 * SCALE,
-    right: -4 * SCALE,
-    minWidth: 16 * SCALE,
-    height: 16 * SCALE,
-    borderRadius: 8 * SCALE,
-    backgroundColor: '#C62828',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3 * SCALE,
-  },
-  notifBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9 * SCALE,
-    fontWeight: '700',
   },
 });
