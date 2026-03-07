@@ -98,6 +98,28 @@ export default function MainScreen() {
   const [profileRefreshing, setProfileRefreshing] = useState(false);
   const { refresh: refreshSettings } = useSettings();
 
+  // Reusable: fetch connect status and shared entry IDs
+  const refreshConnectStatus = useCallback(async () => {
+    const res = await getConnectStatus();
+    if (res.data?.active) {
+      setActiveConnection(res.data.active);
+      const memRes = await getConnectMemories();
+      if (memRes.data?.memories) {
+        const ids = new Set(
+          memRes.data.memories
+            .filter((m) => m.side === 'mine')
+            .map((m) => m.entry.id)
+        );
+        setSharedEntryIds(ids);
+      }
+    } else {
+      // No active connection — clear state so toggle hides
+      setActiveConnection(null);
+      if (connectMode) setConnectMode(false);
+    }
+    setConnectChecked(true);
+  }, [connectMode]);
+
   const onHubRefresh = useCallback(async () => {
     setHubRefreshing(true);
     try { await refreshEntries(); } finally { setHubRefreshing(false); }
@@ -106,34 +128,22 @@ export default function MainScreen() {
   const onTimelineRefresh = useCallback(async () => {
     setTimelineRefreshing(true);
     try {
-      await Promise.all([refreshEntries(), useTimelineStore.getState().fetchOnThisDay()]);
+      await Promise.all([
+        refreshEntries(),
+        useTimelineStore.getState().fetchOnThisDay(),
+        refreshConnectStatus(),
+      ]);
     } finally { setTimelineRefreshing(false); }
-  }, [refreshEntries]);
+  }, [refreshEntries, refreshConnectStatus]);
 
   const onProfileRefresh = useCallback(async () => {
     setProfileRefreshing(true);
     try { await Promise.all([refreshEntries(), refreshSettings()]); } finally { setProfileRefreshing(false); }
   }, [refreshEntries, refreshSettings]);
 
-  // Fetch connect status on mount to know if toggle should be visible
+  // Fetch connect status on mount
   React.useEffect(() => {
-    getConnectStatus().then((res) => {
-      if (res.data?.active) {
-        setActiveConnection(res.data.active);
-        // Fetch all shared entry IDs so we know which are already on connect
-        getConnectMemories().then((memRes) => {
-          if (memRes.data?.memories) {
-            const ids = new Set(
-              memRes.data.memories
-                .filter((m) => m.side === 'mine')
-                .map((m) => m.entry.id)
-            );
-            setSharedEntryIds(ids);
-          }
-        });
-      }
-      setConnectChecked(true);
-    });
+    refreshConnectStatus();
   }, []);
 
   const navigateToPage = useCallback((page: number) => {

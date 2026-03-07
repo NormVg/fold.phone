@@ -80,6 +80,8 @@ interface TimelineState {
   isLoading: boolean;
   isSaving: boolean;
   _lastUserId: string | null;
+  /** True if the last refreshEntries or fetchOnThisDay call failed (network etc.) */
+  _lastLoadFailed: boolean;
 
   // Actions
   addEntry: (entry: Omit<TimelineEntry, 'id' | 'createdAt'>) => Promise<TimelineEntry | null>;
@@ -97,6 +99,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   isLoading: true,
   isSaving: false,
   _lastUserId: null,
+  _lastLoadFailed: false,
 
   fetchOnThisDay: async () => {
     const { isAuthenticated, user } = useAuthStore.getState();
@@ -127,13 +130,15 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const { data, error } = await getTimelineEntries(50, 0);
       if (error) {
         console.error('[Timeline] Fetch error:', error);
+        set({ _lastLoadFailed: true });
         return;
       }
       if (data) {
-        set({ entries: data.map(mapResponseToEntry) });
+        set({ entries: data.map(mapResponseToEntry), _lastLoadFailed: false });
       }
     } catch (err) {
       console.error('[Timeline] Fetch error:', err);
+      set({ _lastLoadFailed: true });
     } finally {
       set({ isLoading: false });
     }

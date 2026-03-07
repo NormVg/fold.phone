@@ -39,6 +39,8 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
   // When auth state changes, propagate to timeline + settings stores.
   // Only fire loadAll once auth has been resolved (skip the initial false→false mount).
   const authResolvedRef = useRef(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     // Always propagate auth state to timeline store
     useTimelineStore.getState().onAuthChange(isAuthenticated, user?.id ?? null);
@@ -52,6 +54,46 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
       useSettingsStore.getState().loadAll();
     }
   }, [isAuthenticated, user?.id]);
+
+  // Retry loop: if any store failed to load data (e.g. slow/offline network),
+  // automatically retry with increasing delays until success.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let attempt = 0;
+    const MAX_ATTEMPTS = 5;
+    const BASE_DELAY = 3_000; // 3 seconds
+
+    const check = () => {
+      const timelineFailed = useTimelineStore.getState()._lastLoadFailed;
+      const settingsFailed = useSettingsStore.getState()._lastLoadFailed;
+
+      if (!timelineFailed && !settingsFailed) return; // all good
+      if (attempt >= MAX_ATTEMPTS) return; // give up
+
+      attempt++;
+      const delay = BASE_DELAY * Math.pow(1.5, attempt - 1); // 3s, 4.5s, 6.75s, ...
+      console.log(`[StoreInitializer] Retry #${attempt} in ${Math.round(delay / 1000)}s (timeline=${timelineFailed}, settings=${settingsFailed})`);
+
+      retryTimerRef.current = setTimeout(async () => {
+        if (timelineFailed) {
+          await useTimelineStore.getState().refreshEntries();
+          useTimelineStore.getState().fetchOnThisDay();
+        }
+        if (settingsFailed) {
+          await useSettingsStore.getState().loadAll();
+        }
+        check(); // schedule next if still failing
+      }, delay);
+    };
+
+    // Start checking after initial load settles (give 2s for first attempt)
+    retryTimerRef.current = setTimeout(check, 2_000);
+
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [isAuthenticated]);
 
   return <>{children}</>;
 }

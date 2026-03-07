@@ -22,6 +22,9 @@ interface SettingsState {
   profileStats: ProfileStats | null;
   isStatsLoading: boolean;
 
+  /** True if the last loadAll call failed (network etc.) */
+  _lastLoadFailed: boolean;
+
   // Actions
   updateAutoLocation: (value: boolean) => Promise<void>;
   updateScreenshotProtection: (value: boolean) => Promise<void>;
@@ -37,6 +40,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   appConfig: null,
   profileStats: null,
   isStatsLoading: true,
+  _lastLoadFailed: false,
 
   loadAll: async () => {
     try {
@@ -60,21 +64,27 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         getProfileStats(),
       ]);
 
+      let failed = false;
+
       if (settingsResult.data) {
         set({
           autoLocation: settingsResult.data.autoLocation,
           screenshotProtection: settingsResult.data.screenshotProtection,
         });
+      } else {
+        failed = true;
       }
       set({ isSettingsLoading: false });
 
       if (statsResult.data) {
         set({ profileStats: statsResult.data });
+      } else {
+        failed = true;
       }
-      set({ isStatsLoading: false });
+      set({ isStatsLoading: false, _lastLoadFailed: failed });
     } catch (err) {
       console.error('[settings-store] loadAll failed:', err);
-      set({ isSettingsLoading: false, isStatsLoading: false });
+      set({ isSettingsLoading: false, isStatsLoading: false, _lastLoadFailed: true });
     }
   },
 
