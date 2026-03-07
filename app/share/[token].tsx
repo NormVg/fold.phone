@@ -1,8 +1,13 @@
-import { TimelineColors } from '@/constants/theme';
+import PhotoCard from '@/components/timeline/PhotoCard';
+import StoryCard from '@/components/timeline/StoryCard';
+import TextCard from '@/components/timeline/TextCard';
+import VideoCard from '@/components/timeline/VideoCard';
+import VoiceCard from '@/components/timeline/VoiceCard';
 import { getPublicShare, type PublicShareEntry } from '@/lib/api';
-import { Image as ExpoImage } from 'expo-image';
+import { addToWatchHistory } from '@/lib/watch-history';
+import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -19,57 +24,16 @@ import Svg, { Circle, Path } from 'react-native-svg';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+const COLORS = {
+  background: '#EDEADC',
+  card: '#FDFBF7',
+  primary: '#810100',
+  text: '#181717',
+  textLight: 'rgba(0, 0, 0, 0.5)',
+  white: '#FFFFFF',
+};
 
-function CloseButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.7 : 1,
-        width: 40 * SCALE,
-        height: 40 * SCALE,
-        borderRadius: 20 * SCALE,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-      })}
-      hitSlop={12}
-    >
-      <Svg width={22 * SCALE} height={22 * SCALE} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M15 18L9 12L15 6"
-          stroke={TimelineColors.primary}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </Svg>
-    </Pressable>
-  );
-}
-
-function ShareViewIcon({ size = 20 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Circle
-        cx="12"
-        cy="12"
-        r="3"
-        stroke={TimelineColors.primary}
-        strokeWidth={1.5}
-      />
-    </Svg>
-  );
-}
-
-const ENTRY_TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<string, string> = {
   text: 'Text Entry',
   audio: 'Voice Note',
   photo: 'Photo',
@@ -77,154 +41,355 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   story: 'Story',
 };
 
-const MOOD_EMOJI: Record<string, string> = {
-  'V. Happy': ':D',
-  'Happy': ':)',
-  'Normal': ':|',
-  'Sad': ':(',
-  'V. Sad': ":'(",
-};
+// ============== ICONS ==============
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function BackIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M15 18L9 12L15 6"
+        stroke={COLORS.primary}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
-export default function ShareViewerScreen() {
-  const router = useRouter();
-  const { token } = useLocalSearchParams<{ token: string }>();
-  const [shareData, setShareData] = useState<PublicShareEntry | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function EyeIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+        stroke="#888"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx="12" cy="12" r="3" stroke="#888" strokeWidth={2} />
+    </Svg>
+  );
+}
 
-  const fetchShare = useCallback(async () => {
-    if (!token) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await getPublicShare(token);
-      if (result.error) {
-        setError(result.error);
+// ============== LOCAL AUDIO HOOK ==============
+
+function useLocalAudio() {
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      soundRef.current?.unloadAsync();
+    };
+  }, []);
+
+  const togglePlayback = useCallback(async (uri: string) => {
+    // If already loaded, toggle play/pause
+    if (soundRef.current) {
+      if (isPlaying) {
+        await soundRef.current.pauseAsync();
+        setIsPlaying(false);
       } else {
-        setShareData(result.data);
+        await soundRef.current.playAsync();
+        setIsPlaying(true);
       }
-    } catch (e) {
-      setError('Failed to load shared memory');
+      return;
+    }
+
+    // Load and play
+    setIsLoading(true);
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true },
+        (status) => {
+          if (status.isLoaded) {
+            const dur = status.durationMillis || 1;
+            setProgress(status.positionMillis / dur);
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+              setProgress(0);
+              soundRef.current?.setPositionAsync(0);
+            }
+          }
+        }
+      );
+      soundRef.current = sound;
+      setIsPlaying(true);
+    } catch {
+      // ignore load errors
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isPlaying]);
+
+  const seekTo = useCallback(async (newProgress: number) => {
+    if (!soundRef.current) return;
+    try {
+      const status = await soundRef.current.getStatusAsync();
+      if ('durationMillis' in status && status.durationMillis) {
+        const positionMillis = status.durationMillis * Math.max(0, Math.min(1, newProgress));
+        await soundRef.current.setPositionAsync(positionMillis);
+        setProgress(newProgress);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return { isPlaying, isLoading, progress, togglePlayback, seekTo };
+}
+
+// ============== MAIN SCREEN ==============
+
+export default function SharedEntryScreen() {
+  const router = useRouter();
+  const { token } = useLocalSearchParams<{ token: string }>();
+  const [data, setData] = useState<PublicShareEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { isPlaying, isLoading: audioLoading, progress, togglePlayback, seekTo } = useLocalAudio();
 
   useEffect(() => {
-    fetchShare();
-  }, [fetchShare]);
+    if (!token) return;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      const result = await getPublicShare(token);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.data) {
+        setData(result.data);
+        // Save to watch history
+        const entry = result.data.entry;
+        const preview = entry.title || entry.caption || entry.content || '';
+        await addToWatchHistory({
+          token,
+          url: `https://link.fold.taohq.org/${token}`,
+          entryType: entry.type,
+          preview: preview.length > 120 ? preview.slice(0, 120) + '...' : preview,
+          mood: entry.mood,
+          viewedAt: new Date().toISOString(),
+          sharedAt: result.data.sharedAt,
+          viewCount: result.data.viewCount,
+        });
+      }
+      setLoading(false);
+    })();
+  }, [token]);
 
-  const entry = shareData?.entry;
+  const handleBack = () => router.back();
 
-  // Format date
-  const formattedDate = entry
-    ? new Date(entry.createdAt).toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : '';
-
-  const formattedTime = entry
-    ? new Date(entry.createdAt).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
-    : '';
-
-  // ── Loading state ──
-  if (isLoading) {
+  // ===== Loading state =====
+  if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
-        <View style={styles.header}>
-          <CloseButton onPress={() => router.back()} />
-          <View style={styles.headerCenter}>
-            <View style={styles.iconCircle}>
-              <ShareViewIcon size={16 * SCALE} />
-            </View>
-            <Text style={styles.headerTitle}>Shared Memory</Text>
-          </View>
-          <View style={{ width: 40 * SCALE }} />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <View style={styles.topBar}>
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <BackIcon size={24 * SCALE} />
+          </Pressable>
+          <Text style={styles.topBarTitle}>Shared Memory</Text>
+          <View style={styles.placeholder} />
         </View>
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={TimelineColors.primary} />
-          <Text style={styles.loadingText}>Loading shared memory...</Text>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading shared entry...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Error state ──
-  if (error || !entry) {
+  // ===== Error state =====
+  if (error || !data) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
-        <View style={styles.header}>
-          <CloseButton onPress={() => router.back()} />
-          <View style={styles.headerCenter}>
-            <View style={styles.iconCircle}>
-              <ShareViewIcon size={16 * SCALE} />
-            </View>
-            <Text style={styles.headerTitle}>Shared Memory</Text>
-          </View>
-          <View style={{ width: 40 * SCALE }} />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <View style={styles.topBar}>
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <BackIcon size={24 * SCALE} />
+          </Pressable>
+          <Text style={styles.topBarTitle}>Shared Memory</Text>
+          <View style={styles.placeholder} />
         </View>
-        <View style={styles.centerContent}>
-          <View style={styles.errorCard}>
-            <View style={styles.errorIconCircle}>
-              <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-                  stroke={TimelineColors.primary}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-            <Text style={styles.errorTitle}>
-              {error === 'This share has expired'
-                ? 'Link Expired'
-                : error === 'This share is currently unavailable'
-                ? 'Temporarily Unavailable'
-                : 'Not Found'}
-            </Text>
-            <Text style={styles.errorSubtitle}>
-              {error || 'This shared memory could not be found'}
-            </Text>
-            <View style={styles.accentStrip} />
+        <View style={styles.centered}>
+          <View style={styles.errorIconCircle}>
+            <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                stroke={COLORS.primary}
+                strokeWidth={2}
+                strokeLinecap="round"
+              />
+            </Svg>
           </View>
+          <Text style={styles.errorTitle}>
+            {error === 'Network error' ? 'Connection Error' : 'Link Unavailable'}
+          </Text>
+          <Text style={styles.errorSubtitle}>
+            {error === 'Network error'
+              ? 'Check your internet connection and try again.'
+              : 'This share link may have expired, been paused, or deleted by the owner.'}
+          </Text>
+          <Pressable onPress={handleBack} style={styles.errorButton}>
+            <Text style={styles.errorButtonText}>Go Back</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Success: render shared entry ──
-  const typeLabel = ENTRY_TYPE_LABELS[entry.type] || 'Entry';
-  const imageMedia = entry.media?.filter((m) => m.type === 'image') || [];
-  const storyPages = entry.storyContent
-    ? entry.storyContent.split('\n\n---\n\n').filter(Boolean)
-    : [];
+  // ===== Render the entry card =====
+  const { entry, sharedAt, viewCount } = data;
+  const typeLabel = TYPE_LABELS[entry.type] || entry.type;
+  const sharedDate = new Date(sharedAt).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const entryTime = new Date(entry.createdAt).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+  const mood = entry.mood || 'Normal';
+
+  const renderEntryCard = () => {
+    if (entry.type === 'text') {
+      return (
+        <TextCard
+          content={entry.content || ''}
+          time={entryTime}
+          mood={mood}
+        />
+      );
+    }
+
+    if (entry.type === 'audio') {
+      const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      const audioMedia = entry.media?.find(m => m.type === 'audio');
+      return (
+        <VoiceCard
+          title={entry.caption || 'Voice memo'}
+          time={entryTime}
+          duration={formatDuration(audioMedia?.duration || 0)}
+          mood={mood}
+          isPlaying={isPlaying}
+          isLoading={audioLoading}
+          progress={progress}
+          onSeek={seekTo}
+          onPlayPress={() => audioMedia?.uri && togglePlayback(audioMedia.uri)}
+        />
+      );
+    }
+
+    if (entry.type === 'photo') {
+      const photoUris = (entry.media || []).filter(m => m.type === 'image').map(m => m.uri);
+      return (
+        <PhotoCard
+          title={entry.caption || 'Photo'}
+          time={entryTime}
+          imageUri={photoUris[0]}
+          imageUris={photoUris.length > 1 ? photoUris : undefined}
+          mood={mood}
+        />
+      );
+    }
+
+    if (entry.type === 'video') {
+      const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      const videoMedia = entry.media?.find(m => m.type === 'video');
+      return (
+        <VideoCard
+          title={entry.caption || 'Video'}
+          time={entryTime}
+          duration={formatDuration(videoMedia?.duration || 0)}
+          thumbnailUri={videoMedia?.thumbnailUri ?? undefined}
+          videoUri={videoMedia?.uri}
+          mood={mood}
+        />
+      );
+    }
+
+    if (entry.type === 'story') {
+      const fullContent = entry.storyContent || entry.content || '';
+      const firstPageContent = fullContent.split('\n\n---\n\n')[0];
+      const storyMediaItems = (entry.media || []).filter(
+        m => m.type === 'image' || m.type === 'video'
+      );
+      return (
+        // Wrap in pointerEvents="none" to prevent StoryCard's internal
+        // navigation to /story/[id] (shared entries have no real ID)
+        <View pointerEvents="none">
+          <StoryCard
+            id="__shared__"
+            title={entry.title || 'Untitled Story'}
+            content={firstPageContent}
+            time={entryTime}
+            mood={mood}
+            pageCount={entry.pageCount ?? undefined}
+            storyMedia={
+              storyMediaItems.length > 0
+                ? storyMediaItems.map(m => ({
+                  uri: m.uri,
+                  type: m.type as 'image' | 'video',
+                  duration: m.duration ?? undefined,
+                }))
+                : undefined
+            }
+          />
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  // For stories, show full content below the card
+  const renderStoryFullContent = () => {
+    if (entry.type !== 'story') return null;
+    const fullContent = entry.storyContent || entry.content || '';
+    const pages = fullContent.split('\n\n---\n\n').filter(Boolean);
+    if (pages.length === 0) return null;
+
+    return (
+      <View style={styles.storyFullContent}>
+        <Text style={styles.storyFullLabel}>Full Story</Text>
+        {pages.map((page, i) => (
+          <View key={i} style={styles.storyPageCard}>
+            {pages.length > 1 && (
+              <Text style={styles.storyPageNumber}>Page {i + 1}</Text>
+            )}
+            <Text style={styles.storyPageText}>{page}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={TimelineColors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <CloseButton onPress={() => router.back()} />
-        <View style={styles.headerCenter}>
-          <View style={styles.iconCircle}>
-            <ShareViewIcon size={16 * SCALE} />
-          </View>
-          <Text style={styles.headerTitle}>Shared Memory</Text>
-        </View>
-        <View style={{ width: 40 * SCALE }} />
+      <View style={styles.topBar}>
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <BackIcon size={24 * SCALE} />
+        </Pressable>
+        <Text style={styles.topBarTitle}>Shared Memory</Text>
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView
@@ -232,430 +397,219 @@ export default function ShareViewerScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Type + date badge row */}
-        <View style={styles.badgeRow}>
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+        {/* Share info bar */}
+        <View style={styles.shareInfoBar}>
+          <View style={styles.shareInfoLeft}>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+            </View>
+            <Text style={styles.shareInfoText}>Shared {sharedDate}</Text>
           </View>
-          <View style={styles.viewsBadge}>
-            <Text style={styles.viewsBadgeText}>
-              {shareData?.viewCount || 0} {(shareData?.viewCount || 0) === 1 ? 'view' : 'views'}
+          <View style={styles.viewsRow}>
+            <EyeIcon size={13 * SCALE} />
+            <Text style={styles.shareInfoText}>
+              {viewCount} {viewCount === 1 ? 'view' : 'views'}
             </Text>
           </View>
         </View>
 
-        {/* Title (for stories) */}
-        {entry.title && (
-          <Text style={styles.entryTitle}>{entry.title}</Text>
-        )}
-
-        {/* Date + time */}
-        <View style={styles.metaRow}>
-          <Text style={styles.metaDate}>{formattedDate}</Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaTime}>{formattedTime}</Text>
+        {/* The actual timeline card */}
+        <View style={styles.cardContainer}>
+          {renderEntryCard()}
         </View>
 
-        {/* Tags */}
-        <View style={styles.tagsRow}>
-          {entry.mood && (
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>
-                {MOOD_EMOJI[entry.mood] || ''} {entry.mood}
-              </Text>
-            </View>
-          )}
-          {entry.type === 'story' && storyPages.length > 1 && (
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{storyPages.length} pages</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Caption */}
-        {entry.caption && entry.type !== 'text' && (
-          <Text style={styles.caption}>{entry.caption}</Text>
-        )}
-
-        {/* Photo gallery */}
-        {imageMedia.length > 0 && (
-          <View style={styles.mediaSection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.mediaScroll}
-            >
-              {imageMedia.map((media, index) => (
-                <View key={media.id || index} style={styles.mediaItem}>
-                  <ExpoImage
-                    source={{ uri: media.uri }}
-                    style={styles.mediaImage}
-                    contentFit="cover"
-                  />
-                </View>
-              ))}
-            </ScrollView>
+        {/* Caption (if present and not already shown in card) */}
+        {entry.caption && entry.type !== 'audio' && entry.type !== 'photo' && entry.type !== 'video' && (
+          <View style={styles.captionCard}>
+            <Text style={styles.captionText}>{entry.caption}</Text>
           </View>
         )}
 
-        {/* Text content */}
-        {entry.type === 'text' && entry.content && (
-          <View style={styles.contentCard}>
-            <Text style={styles.contentText}>{entry.content}</Text>
-          </View>
-        )}
+        {/* Full story content (below the preview card) */}
+        {renderStoryFullContent()}
 
-        {/* Story content */}
-        {entry.type === 'story' && storyPages.length > 0 && (
-          <View>
-            {storyPages.map((page, index) => (
-              <View key={index} style={styles.pageWrapper}>
-                {storyPages.length > 1 && (
-                  <View style={styles.pageLabelRow}>
-                    <Text style={styles.pageLabel}>Page {index + 1}</Text>
-                  </View>
-                )}
-                <View style={styles.contentCard}>
-                  <Text style={styles.contentText}>{page}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Audio placeholder */}
-        {entry.type === 'audio' && (
-          <View style={styles.contentCard}>
-            <View style={styles.audioPlaceholder}>
-              <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"
-                  stroke={TimelineColors.primary}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text style={styles.audioText}>Voice Note</Text>
-              <Text style={styles.audioSubtext}>
-                Open in Fold to listen
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Video placeholder */}
-        {entry.type === 'video' && entry.media?.find((m) => m.type === 'video') && (
-          <View style={styles.contentCard}>
-            {entry.media.find((m) => m.type === 'video')?.thumbnailUri ? (
-              <ExpoImage
-                source={{ uri: entry.media.find((m) => m.type === 'video')!.thumbnailUri! }}
-                style={styles.videoThumbnail}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.audioPlaceholder}>
-                <Text style={styles.audioText}>Video</Text>
-                <Text style={styles.audioSubtext}>Open in Fold to watch</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Footer branding */}
-        <View style={styles.brandingFooter}>
-          <View style={styles.brandingDivider} />
-          <Text style={styles.brandingText}>Shared via Fold</Text>
-          <Text style={styles.brandingSubtext}>Your private memory vault</Text>
-        </View>
-
-        <View style={{ height: 40 * SCALE }} />
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ============== STYLES ==============
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: TimelineColors.background,
+    backgroundColor: COLORS.background,
   },
-  header: {
+  topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 17 * SCALE,
-    paddingTop: 6 * SCALE,
-    paddingBottom: 12 * SCALE,
+    paddingTop: 5 * SCALE,
+    height: 55 * SCALE,
   },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8 * SCALE,
-  },
-  iconCircle: {
-    width: 32 * SCALE,
-    height: 32 * SCALE,
-    borderRadius: 16 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.15)',
-    alignItems: 'center',
+  backButton: {
+    width: 40 * SCALE,
+    height: 40 * SCALE,
     justifyContent: 'center',
+    alignItems: 'flex-start',
   },
-  headerTitle: {
+  topBarTitle: {
     fontSize: 18 * SCALE,
     fontWeight: '600',
-    color: TimelineColors.textDark,
+    color: COLORS.text,
   },
-  scrollView: {
+  placeholder: {
+    width: 40 * SCALE,
+  },
+  centered: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 17 * SCALE,
-    paddingTop: 8 * SCALE,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32 * SCALE,
     gap: 12 * SCALE,
   },
   loadingText: {
     fontSize: 14 * SCALE,
-    color: '#8A8780',
-    fontWeight: '500',
+    color: COLORS.textLight,
+    marginTop: 8 * SCALE,
   },
 
-  // Error
-  errorCard: {
-    width: 340 * SCALE,
-    backgroundColor: '#FDFBF7',
-    borderRadius: 20 * SCALE,
-    padding: 32 * SCALE,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
+  // Error state
   errorIconCircle: {
-    width: 48 * SCALE,
-    height: 48 * SCALE,
-    borderRadius: 24 * SCALE,
-    backgroundColor: 'rgba(129, 1, 0, 0.12)',
+    width: 64 * SCALE,
+    height: 64 * SCALE,
+    borderRadius: 32 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16 * SCALE,
+    marginBottom: 8 * SCALE,
   },
   errorTitle: {
-    fontFamily: 'SignPainter',
-    fontSize: 26 * SCALE,
-    color: TimelineColors.primary,
-    textAlign: 'center',
-    marginBottom: 6 * SCALE,
+    fontSize: 20 * SCALE,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   errorSubtitle: {
     fontSize: 14 * SCALE,
-    color: '#8A8780',
+    color: '#777',
     textAlign: 'center',
-    lineHeight: 20 * SCALE,
-    marginBottom: 18 * SCALE,
+    lineHeight: 21 * SCALE,
   },
-  accentStrip: {
-    width: 48 * SCALE,
-    height: 3 * SCALE,
-    borderRadius: 1.5 * SCALE,
-    backgroundColor: TimelineColors.primary,
+  errorButton: {
+    marginTop: 12 * SCALE,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28 * SCALE,
+    paddingVertical: 12 * SCALE,
+    borderRadius: 25 * SCALE,
+  },
+  errorButtonText: {
+    color: COLORS.white,
+    fontSize: 15 * SCALE,
+    fontWeight: '600',
   },
 
-  // Badges
-  badgeRow: {
+  // Content
+  scrollView: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 17 * SCALE,
+    paddingTop: 16 * SCALE,
+  },
+
+  // Share info bar
+  shareInfoBar: {
     flexDirection: 'row',
-    gap: 8 * SCALE,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12 * SCALE,
+    paddingHorizontal: 14 * SCALE,
+    paddingVertical: 10 * SCALE,
     marginBottom: 16 * SCALE,
+  },
+  shareInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10 * SCALE,
+  },
+  shareInfoText: {
+    fontSize: 12 * SCALE,
+    fontWeight: '500',
+    color: '#888',
+  },
+  viewsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4 * SCALE,
   },
   typeBadge: {
     backgroundColor: 'rgba(129, 1, 0, 0.1)',
-    paddingHorizontal: 12 * SCALE,
-    paddingVertical: 6 * SCALE,
     borderRadius: 8 * SCALE,
+    paddingHorizontal: 10 * SCALE,
+    paddingVertical: 4 * SCALE,
   },
   typeBadgeText: {
     fontSize: 12 * SCALE,
     fontWeight: '600',
-    color: TimelineColors.primary,
-  },
-  viewsBadge: {
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-    paddingHorizontal: 12 * SCALE,
-    paddingVertical: 6 * SCALE,
-    borderRadius: 8 * SCALE,
-  },
-  viewsBadgeText: {
-    fontSize: 12 * SCALE,
-    fontWeight: '500',
-    color: '#8A8780',
+    color: COLORS.primary,
   },
 
-  // Title
-  entryTitle: {
-    fontSize: 28 * SCALE,
-    fontWeight: '700',
-    color: TimelineColors.textDark,
-    lineHeight: 36 * SCALE,
-    marginBottom: 8 * SCALE,
-  },
-
-  // Meta
-  metaRow: {
-    flexDirection: 'row',
+  // Card container
+  cardContainer: {
     alignItems: 'center',
-    gap: 6 * SCALE,
-    marginBottom: 12 * SCALE,
-  },
-  metaDate: {
-    fontSize: 13 * SCALE,
-    color: 'rgba(0, 0, 0, 0.5)',
-  },
-  metaDot: {
-    fontSize: 13 * SCALE,
-    color: 'rgba(0, 0, 0, 0.5)',
-  },
-  metaTime: {
-    fontSize: 13 * SCALE,
-    color: 'rgba(0, 0, 0, 0.5)',
-  },
-
-  // Tags
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8 * SCALE,
-    marginBottom: 20 * SCALE,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FDFBF7',
-    borderRadius: 8 * SCALE,
-    paddingHorizontal: 12 * SCALE,
-    paddingVertical: 8 * SCALE,
-    gap: 6 * SCALE,
-  },
-  tagText: {
-    fontSize: 12 * SCALE,
-    fontWeight: '500',
-    color: TimelineColors.textDark,
+    marginBottom: 16 * SCALE,
   },
 
   // Caption
-  caption: {
+  captionCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16 * SCALE,
+    padding: 16 * SCALE,
+    marginBottom: 16 * SCALE,
+    borderLeftWidth: 3 * SCALE,
+    borderLeftColor: 'rgba(129, 1, 0, 0.3)',
+  },
+  captionText: {
     fontSize: 15 * SCALE,
     fontWeight: '500',
-    color: TimelineColors.textDark,
+    color: COLORS.text,
+    lineHeight: 22 * SCALE,
+    fontStyle: 'italic',
+  },
+
+  // Story full content
+  storyFullContent: {
     marginBottom: 16 * SCALE,
   },
-
-  // Media
-  mediaSection: {
-    marginBottom: 20 * SCALE,
-    marginHorizontal: -17 * SCALE,
+  storyFullLabel: {
+    fontSize: 16 * SCALE,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 12 * SCALE,
   },
-  mediaScroll: {
-    paddingHorizontal: 17 * SCALE,
-    gap: 12 * SCALE,
-  },
-  mediaItem: {
-    width: 240 * SCALE,
-    height: 180 * SCALE,
-    borderRadius: 16 * SCALE,
-    overflow: 'hidden',
-  },
-  mediaImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  // Content card
-  contentCard: {
-    backgroundColor: '#FDFBF7',
+  storyPageCard: {
+    backgroundColor: COLORS.card,
     borderRadius: 16 * SCALE,
     padding: 20 * SCALE,
-    marginBottom: 16 * SCALE,
+    marginBottom: 12 * SCALE,
     borderLeftWidth: 4 * SCALE,
-    borderLeftColor: TimelineColors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    borderLeftColor: COLORS.primary,
   },
-  contentText: {
+  storyPageNumber: {
+    fontSize: 13 * SCALE,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 8 * SCALE,
+  },
+  storyPageText: {
     fontSize: 16 * SCALE,
     fontWeight: '400',
-    color: TimelineColors.textDark,
+    color: COLORS.text,
     lineHeight: 26 * SCALE,
   },
 
-  // Story pages
-  pageWrapper: {
-    marginBottom: 16 * SCALE,
-  },
-  pageLabelRow: {
-    marginBottom: 8 * SCALE,
-  },
-  pageLabel: {
-    fontSize: 14 * SCALE,
-    fontWeight: '600',
-    color: TimelineColors.primary,
-  },
-
-  // Audio / Video placeholders
-  audioPlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 24 * SCALE,
-    gap: 8 * SCALE,
-  },
-  audioText: {
-    fontSize: 16 * SCALE,
-    fontWeight: '600',
-    color: TimelineColors.textDark,
-  },
-  audioSubtext: {
-    fontSize: 13 * SCALE,
-    color: '#8A8780',
-  },
-  videoThumbnail: {
-    width: '100%',
-    height: 200 * SCALE,
-    borderRadius: 12 * SCALE,
-  },
-
-  // Branding footer
-  brandingFooter: {
-    alignItems: 'center',
-    paddingTop: 24 * SCALE,
-    paddingBottom: 8 * SCALE,
-  },
-  brandingDivider: {
-    width: 48 * SCALE,
-    height: 3 * SCALE,
-    borderRadius: 1.5 * SCALE,
-    backgroundColor: TimelineColors.primary,
-    marginBottom: 16 * SCALE,
-  },
-  brandingText: {
-    fontFamily: 'SignPainter',
-    fontSize: 22 * SCALE,
-    color: TimelineColors.primary,
-    marginBottom: 4 * SCALE,
-  },
-  brandingSubtext: {
-    fontSize: 12 * SCALE,
-    color: '#8A8780',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  bottomPadding: {
+    height: 40 * SCALE,
   },
 });
