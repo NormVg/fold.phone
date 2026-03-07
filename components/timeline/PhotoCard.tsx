@@ -102,7 +102,7 @@ export function PhotoCard({
             <View style={styles.iconCircle}>
               <PhotoIcon size={16 * SCALE} />
             </View>
-            <Text style={styles.titleText}>{title}</Text>
+            <Text style={styles.titleText} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
           </View>
           <View style={styles.timeBadge}>
             <Text style={styles.timeText}>{time}</Text>
@@ -199,6 +199,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8 * SCALE,
+    flex: 1,
+    marginRight: 8 * SCALE,
   },
   iconCircle: {
     width: 28 * SCALE,
@@ -212,6 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 18 * SCALE,
     fontWeight: '600',
     color: '#181717',
+    flex: 1,
   },
   timeBadge: {
     backgroundColor: '#EDEADC',

@@ -131,47 +131,56 @@ function AudioWaveform({
     })
     .runOnJS(true);
 
+  const showAsActive = (isPlaying || scrubProgress !== null || progress > 0);
+
   return (
     <GestureDetector gesture={panGesture}>
-      <View>
-        <Svg width={WAVEFORM_WIDTH} height={28 * SCALE} viewBox="0 0 200 28">
-          <Defs>
-            <LinearGradient id="waveGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#181717" />
-              <Stop offset="0.5" stopColor="#810100" />
-              <Stop offset="1" stopColor="#810100" />
-            </LinearGradient>
-            <LinearGradient id="playedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#810100" />
-              <Stop offset="1" stopColor="#810100" />
-            </LinearGradient>
-            <LinearGradient id="unplayedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#CCC" />
-              <Stop offset="1" stopColor="#AAA" />
-            </LinearGradient>
-          </Defs>
-          {Array.from({ length: barCount }, (_, i) => {
-            const x = 2 + i * 6.2;
-            const h = heights[i % heights.length];
-            const y = (28 - h) / 2;
-            // Color bars based on progress
-            const isPlayed = i <= progressIndex;
-            // If we are actively scrubbing OR audio is playing, use the play colors
-            const showAsActive = (isPlaying || scrubProgress !== null);
-            const fillColor = showAsActive ? (isPlayed ? 'url(#playedGradient)' : 'url(#unplayedGradient)') : 'url(#waveGradient)';
-            return (
-              <Rect
-                key={i}
-                x={x}
-                y={y}
-                width="3"
-                height={h}
-                rx="1.5"
-                fill={fillColor}
-              />
-            );
-          })}
-        </Svg>
+      <View style={{ width: WAVEFORM_WIDTH, height: 28 * SCALE, justifyContent: 'center' }}>
+        {showAsActive ? (
+          // Solid Progress Bar View
+          <View style={styles.progressBarTrack}>
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${displayProgress * 100}%` }
+              ]}
+            />
+            {/* Draggable thumb indicator */}
+            <View
+              style={[
+                styles.progressThumb,
+                { left: `${displayProgress * 100}%` }
+              ]}
+            />
+          </View>
+        ) : (
+          // Original SVG Waveform View
+          <Svg width={WAVEFORM_WIDTH} height={28 * SCALE} viewBox="0 0 200 28">
+            <Defs>
+              <LinearGradient id="waveGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
+                <Stop offset="0" stopColor="#181717" />
+                <Stop offset="0.5" stopColor="#810100" />
+                <Stop offset="1" stopColor="#810100" />
+              </LinearGradient>
+            </Defs>
+            {Array.from({ length: barCount }, (_, i) => {
+              const x = 2 + i * 6.2;
+              const h = heights[i % heights.length];
+              const y = (28 - h) / 2;
+              return (
+                <Rect
+                  key={i}
+                  x={x}
+                  y={y}
+                  width="3"
+                  height={h}
+                  rx="1.5"
+                  fill="url(#waveGradient)"
+                />
+              );
+            })}
+          </Svg>
+        )}
       </View>
     </GestureDetector>
   );
@@ -202,7 +211,7 @@ export function VoiceCard({
           <View style={styles.micCircle}>
             <MicIcon size={16 * SCALE} />
           </View>
-          <Text style={styles.titleText}>{title}</Text>
+          <Text style={styles.titleText} numberOfLines={1}>{title}</Text>
         </View>
         <View style={styles.timeBadge}>
           <Text style={styles.timeText}>{time}</Text>
@@ -273,6 +282,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8 * SCALE,
+    flex: 1,
+    marginRight: 8 * SCALE,
   },
   micCircle: {
     width: 28 * SCALE,
@@ -286,6 +297,7 @@ const styles = StyleSheet.create({
     fontSize: 18 * SCALE,
     fontWeight: '600',
     color: '#181717',
+    flex: 1,
   },
   timeBadge: {
     backgroundColor: '#EDEADC',
@@ -345,6 +357,35 @@ const styles = StyleSheet.create({
     fontSize: 11 * SCALE,
     fontWeight: '600',
     color: '#181717',
+  },
+  progressBarTrack: {
+    width: '100%',
+    height: 6 * SCALE,
+    backgroundColor: '#CCC',
+    borderRadius: 3 * SCALE,
+    position: 'relative',
+  },
+  progressBarFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#810100',
+    borderRadius: 3 * SCALE,
+  },
+  progressThumb: {
+    position: 'absolute',
+    top: -4 * SCALE, // (14 - 6) / 2
+    width: 14 * SCALE,
+    height: 14 * SCALE,
+    borderRadius: 7 * SCALE,
+    backgroundColor: '#810100',
+    transform: [{ translateX: -7 * SCALE }], // Center thumb on the end of the fill
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });
 
