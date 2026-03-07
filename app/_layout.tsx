@@ -36,10 +36,21 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
     useAuthStore.getState().initialize();
   }, []);
 
-  // When auth state changes, propagate to timeline + settings stores
+  // When auth state changes, propagate to timeline + settings stores.
+  // Only fire loadAll once auth has been resolved (skip the initial false→false mount).
+  const authResolvedRef = useRef(false);
   useEffect(() => {
+    // Always propagate auth state to timeline store
     useTimelineStore.getState().onAuthChange(isAuthenticated, user?.id ?? null);
-    useSettingsStore.getState().loadAll();
+
+    // Only load settings once we have a definitive auth result
+    if (isAuthenticated) {
+      authResolvedRef.current = true;
+      useSettingsStore.getState().loadAll();
+    } else if (authResolvedRef.current) {
+      // User logged out — reload to reset settings
+      useSettingsStore.getState().loadAll();
+    }
   }, [isAuthenticated, user?.id]);
 
   return <>{children}</>;
@@ -64,15 +75,23 @@ function ScreenCaptureGuard() {
 
     if (shouldProtect && !activeRef.current) {
       activeRef.current = true;
-      ScreenCapture.preventScreenCaptureAsync('fold_guard');
+      ScreenCapture.preventScreenCaptureAsync('fold_guard').catch((e) =>
+        console.warn('[ScreenCaptureGuard] preventScreenCaptureAsync failed:', e)
+      );
       if (Platform.OS === 'ios') {
-        ScreenCapture.enableAppSwitcherProtectionAsync(0.5);
+        ScreenCapture.enableAppSwitcherProtectionAsync(0.5).catch((e) =>
+          console.warn('[ScreenCaptureGuard] enableAppSwitcherProtectionAsync failed:', e)
+        );
       }
     } else if (!shouldProtect && activeRef.current) {
       activeRef.current = false;
-      ScreenCapture.allowScreenCaptureAsync('fold_guard');
+      ScreenCapture.allowScreenCaptureAsync('fold_guard').catch((e) =>
+        console.warn('[ScreenCaptureGuard] allowScreenCaptureAsync failed:', e)
+      );
       if (Platform.OS === 'ios') {
-        ScreenCapture.disableAppSwitcherProtectionAsync();
+        ScreenCapture.disableAppSwitcherProtectionAsync().catch((e) =>
+          console.warn('[ScreenCaptureGuard] disableAppSwitcherProtectionAsync failed:', e)
+        );
       }
     }
   }, [screenshotProtection, segments]);
@@ -81,9 +100,9 @@ function ScreenCaptureGuard() {
   useEffect(() => {
     return () => {
       if (activeRef.current) {
-        ScreenCapture.allowScreenCaptureAsync('fold_guard');
+        ScreenCapture.allowScreenCaptureAsync('fold_guard').catch(() => {});
         if (Platform.OS === 'ios') {
-          ScreenCapture.disableAppSwitcherProtectionAsync();
+          ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => {});
         }
       }
     };

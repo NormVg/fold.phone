@@ -32,45 +32,50 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   autoLocation: false,
-  screenshotProtection: true,
+  screenshotProtection: false,
   isSettingsLoading: true,
   appConfig: null,
   profileStats: null,
   isStatsLoading: true,
 
   loadAll: async () => {
-    set({ isSettingsLoading: true, isStatsLoading: true });
+    try {
+      set({ isSettingsLoading: true, isStatsLoading: true });
 
-    // App config is public — always fetch
-    const configResult = await getAppConfig();
-    if (configResult.data) {
-      set({ appConfig: configResult.data });
-    }
+      // App config is public — always fetch
+      const configResult = await getAppConfig();
+      if (configResult.data) {
+        set({ appConfig: configResult.data });
+      }
 
-    const { isAuthenticated } = useAuthStore.getState();
-    if (!isAuthenticated) {
+      const { isAuthenticated } = useAuthStore.getState();
+      if (!isAuthenticated) {
+        set({ isSettingsLoading: false, isStatsLoading: false });
+        return;
+      }
+
+      // Fetch user settings and profile stats in parallel
+      const [settingsResult, statsResult] = await Promise.all([
+        getUserSettings(),
+        getProfileStats(),
+      ]);
+
+      if (settingsResult.data) {
+        set({
+          autoLocation: settingsResult.data.autoLocation,
+          screenshotProtection: settingsResult.data.screenshotProtection,
+        });
+      }
+      set({ isSettingsLoading: false });
+
+      if (statsResult.data) {
+        set({ profileStats: statsResult.data });
+      }
+      set({ isStatsLoading: false });
+    } catch (err) {
+      console.error('[settings-store] loadAll failed:', err);
       set({ isSettingsLoading: false, isStatsLoading: false });
-      return;
     }
-
-    // Fetch user settings and profile stats in parallel
-    const [settingsResult, statsResult] = await Promise.all([
-      getUserSettings(),
-      getProfileStats(),
-    ]);
-
-    if (settingsResult.data) {
-      set({
-        autoLocation: settingsResult.data.autoLocation,
-        screenshotProtection: settingsResult.data.screenshotProtection,
-      });
-    }
-    set({ isSettingsLoading: false });
-
-    if (statsResult.data) {
-      set({ profileStats: statsResult.data });
-    }
-    set({ isStatsLoading: false });
   },
 
   updateAutoLocation: async (value: boolean) => {
