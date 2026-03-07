@@ -194,6 +194,12 @@ export function BiometricLockProvider({ children, isAuthenticated }: BiometricLo
   const appState = useRef(AppState.currentState);
   const authenticatingRef = useRef(false);
   const coldStartHandled = useRef(false);
+  const backgroundAtRef = useRef<number | null>(null);
+
+  // Grace period before locking (ms). Camera, media picker, share sheets,
+  // and permission dialogs all put the app into background briefly. Only
+  // lock if the user was away longer than this.
+  const LOCK_GRACE_MS = 15_000; // 15 seconds
 
   // ── Initialize: check hardware + load saved preference ──
   useEffect(() => {
@@ -224,17 +230,33 @@ export function BiometricLockProvider({ children, isAuthenticated }: BiometricLo
     }
   }, [ready, isEnabled, isAuthenticated]);
 
-  // ── AppState: lock when going to background ──
+  // ── AppState: lock after grace period in background ──
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
-      if (
-        isEnabled &&
-        isAuthenticated &&
-        appState.current.match(/active/) &&
-        nextState.match(/inactive|background/)
-      ) {
-        setIsLocked(true);
+      if (!isEnabled || !isAuthenticated) {
+        appState.current = nextState;
+        return;
       }
+
+      if (appState.current === 'active' && nextState === 'background') {
+        // Record when we went to background
+        backgroundAtRef.current = Date.now();
+      } else if (
+        appState.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        // Returning to foreground — only lock if we exceeded the grace period.
+        // This prevents locking when the user briefly leaves for camera,
+        // media picker, permission dialogs, or quick app switches.
+        if (backgroundAtRef.current) {
+          const elapsed = Date.now() - backgroundAtRef.current;
+          if (elapsed >= LOCK_GRACE_MS) {
+            setIsLocked(true);
+          }
+          backgroundAtRef.current = null;
+        }
+      }
+
       appState.current = nextState;
     });
 
