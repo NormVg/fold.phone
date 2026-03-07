@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { getMoodIcon } from './MoodIcons';
 
@@ -102,56 +103,79 @@ function AudioWaveform({
   const barCount = 32;
   const heights = [4, 8, 12, 18, 14, 8, 16, 22, 12, 6, 14, 20, 10, 16, 24, 18, 8, 12, 20, 14, 10, 18, 24, 16, 8, 14, 10, 18, 22, 12, 8, 6];
 
-  // Local state for scrubbing so UI updates smoothly before audio catches up
-  const [scrubProgress, setScrubProgress] = React.useState<number | null>(null);
-  const displayProgress = scrubProgress !== null ? scrubProgress : progress;
-  const progressIndex = Math.floor(displayProgress * barCount);
-
   const WAVEFORM_WIDTH = 200 * SCALE;
+
+  // Reanimated shared values for perfectly smooth UI scrubbing off the JS bridge
+  const isScrubbing = useSharedValue(false);
+  const scrubProgress = useSharedValue(progress);
+
+  // Local state purely for toggling the View/SVG element layout container
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isScrubbing.value) {
+      scrubProgress.value = progress;
+    }
+  }, [progress, isScrubbing, scrubProgress]);
+
+  const handleSeek = (val: number) => {
+    if (onSeek) onSeek(val);
+  };
+
+  const startDragging = () => setIsDragging(true);
+  const stopDragging = () => setIsDragging(false);
 
   const panGesture = Gesture.Pan()
     .onBegin((e) => {
-      if (onSeek) {
-        setScrubProgress(Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH)));
-      }
+      isScrubbing.value = true;
+      scrubProgress.value = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
+      runOnJS(startDragging)();
     })
     .onUpdate((e) => {
-      if (onSeek) {
-        setScrubProgress(Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH)));
-      }
+      scrubProgress.value = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
     })
     .onEnd((e) => {
-      if (onSeek) {
-        const finalProgress = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
-        onSeek(finalProgress);
-      }
+      const finalVal = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
+      scrubProgress.value = finalVal;
+      runOnJS(handleSeek)(finalVal);
     })
     .onFinalize(() => {
-      setScrubProgress(null);
-    })
-    .runOnJS(true);
+      isScrubbing.value = false;
+      runOnJS(stopDragging)();
+    });
 
-  const showAsActive = (isPlaying || scrubProgress !== null || progress > 0);
+  const tapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      const finalVal = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
+      scrubProgress.value = finalVal;
+      runOnJS(handleSeek)(finalVal);
+    });
+
+  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
+
+  const fillStyle = useAnimatedStyle(() => {
+    return {
+      width: `${scrubProgress.value * 100}%`,
+    };
+  });
+
+  const thumbStyle = useAnimatedStyle(() => {
+    return {
+      left: `${scrubProgress.value * 100}%`,
+    };
+  });
+
+  const showAsActive = (isPlaying || progress > 0 || isDragging);
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={composedGesture}>
       <View style={{ width: WAVEFORM_WIDTH, height: 28 * SCALE, justifyContent: 'center' }}>
         {showAsActive ? (
           // Solid Progress Bar View
           <View style={styles.progressBarTrack}>
-            <View
-              style={[
-                styles.progressBarFill,
-                { width: `${displayProgress * 100}%` }
-              ]}
-            />
+            <Animated.View style={[styles.progressBarFill, fillStyle]} />
             {/* Draggable thumb indicator */}
-            <View
-              style={[
-                styles.progressThumb,
-                { left: `${displayProgress * 100}%` }
-              ]}
-            />
+            <Animated.View style={[styles.progressThumb, thumbStyle]} />
           </View>
         ) : (
           // Original SVG Waveform View
