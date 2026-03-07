@@ -316,12 +316,12 @@ export default function SharesScreen() {
       return;
     }
     setLinkInput('');
-    router.push(`/shared/${token}`);
+    router.push(`/share/${token}`);
   }, [linkInput, router]);
 
   const handleHistoryPress = useCallback(
     (item: WatchHistoryItem) => {
-      router.push(`/shared/${item.token}`);
+      router.push(`/share/${item.token}`);
     },
     [router]
   );
