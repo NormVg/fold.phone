@@ -791,6 +791,11 @@ export interface ProfileStats {
   totalEntries: number;
   totalAudioMinutes: number;
   isStreakActive: boolean;
+  storyStats?: {
+    totalStories: number;
+    totalStoryWords: number;
+    happyStoryCount: number;
+  };
   badges: { type: string; earnedAt: string }[];
 }
 

@@ -65,7 +65,7 @@ export default function MainScreen() {
   const { entries, onThisDayGroups, isLoading: isTimelineLoading, refreshEntries } = useTimeline();
 
   // Real profile stats
-  const { streakDays, isStreakActive, audioMinutes, foldScore, percentile, activityData: profileActivityData } = useProfileStats();
+  const { streakDays, isStreakActive, audioMinutes, foldScore, percentile, activityData: profileActivityData, refresh: refreshProfileStats } = useProfileStats();
 
   // Horizontal pager state (custom gesture pager)
   const translateX = useSharedValue(-SCREEN_WIDTH * PAGE_TIMELINE);
@@ -139,8 +139,8 @@ export default function MainScreen() {
 
   const onProfileRefresh = useCallback(async () => {
     setProfileRefreshing(true);
-    try { await Promise.all([refreshEntries(), refreshSettings()]); } finally { setProfileRefreshing(false); }
-  }, [refreshEntries, refreshSettings]);
+    try { await Promise.all([refreshEntries(), refreshSettings(), refreshProfileStats()]); } finally { setProfileRefreshing(false); }
+  }, [refreshEntries, refreshSettings, refreshProfileStats]);
 
   // Fetch connect status on mount
   React.useEffect(() => {

@@ -1,5 +1,5 @@
-import { TimelineColors } from '@/constants/theme';
 import { getMoodIcon, HappySmallIcon } from '@/components/timeline/MoodIcons';
+import { TimelineColors } from '@/constants/theme';
 import { useRouter, type Href } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -148,17 +148,13 @@ function isHappyMood(mood: string | null | undefined): boolean {
 }
 
 
-// ============== COMPONENTS ==============
+import { useProfileStats, type UIProfileStats } from '@/lib/profile-hooks';
 
-function InsightsCard({ stories }: { stories: TimelineEntry[] }) {
-  const totalStories = stories.length;
+function InsightsCard({ stats }: { stats: UIProfileStats['storyStats'] }) {
+  const totalStories = stats?.totalStories || 0;
+  const totalWords = stats?.totalStoryWords || 0;
+  const happyStories = stats?.happyStoryCount || 0;
 
-  const totalWords = stories.reduce((acc, s) => {
-    const content = s.storyContent || s.content || '';
-    return acc + getWordCount(content);
-  }, 0);
-
-  const happyStories = stories.filter(s => isHappyMood(s.mood)).length;
   const avgWordsPerStory = totalStories > 0 ? Math.round(totalWords / totalStories) : 0;
   const happyPercentage = totalStories > 0 ? Math.round((happyStories / totalStories) * 100) : 0;
 
@@ -239,12 +235,17 @@ function StoryListItem({ story, onPress }: { story: TimelineEntry; onPress: () =
 export default function StoriesScreen() {
   const router = useRouter();
   const { entries, refreshEntries } = useTimeline();
+  const { storyStats, refresh: refreshStats } = useProfileStats();
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try { await refreshEntries(); } finally { setRefreshing(false); }
-  }, [refreshEntries]);
+    try {
+      await Promise.all([refreshEntries(), refreshStats()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshEntries, refreshStats]);
 
   // Filter for story types only
   const stories = React.useMemo(() => {
@@ -298,7 +299,7 @@ export default function StoriesScreen() {
         }
       >
         {/* Insights Section */}
-        <InsightsCard stories={stories} />
+        <InsightsCard stats={storyStats} />
 
         {/* Stories List Header */}
         <View style={styles.listHeader}>
