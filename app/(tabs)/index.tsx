@@ -166,6 +166,7 @@ export default function MainScreen() {
   const handleCapturePress = () => router.push('/entry-text'); // Tap -> text entry
   const handleCaptureLongPress = () => router.push('/entry-audio'); // Long press -> voice recording
   const handleCaptureDoubleTap = () => router.push('/entry-story'); // Double tap -> story mode
+  const handleHomePress = () => navigateToPage(PAGE_TIMELINE); // Home btn on hub/profile
   const handleProfilePress = () => navigateToPage(PAGE_PROFILE);
 
   // Hub handlers
@@ -689,6 +690,7 @@ export default function MainScreen() {
         onGridPress={handleGridPress}
         onCapturePress={handleCapturePress}
         onCaptureLongPress={handleCaptureLongPress}
+        onHomePress={handleHomePress}
         onProfilePress={handleProfilePress}
       />
     </SafeAreaView>

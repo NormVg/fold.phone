@@ -10,6 +10,7 @@ export { FlameIcon } from './FlameIcon';
 export { FolderIcon } from './FolderIcon';
 export { GoogleIcon } from './GoogleIcon';
 export { GridIcon } from './GridIcon';
+export { HomeIcon } from './HomeIcon';
 export { LockIcon } from './LockIcon';
 export { MicrophoneIcon } from './MicrophoneIcon';
 export { ProfileIcon } from './ProfileIcon';
