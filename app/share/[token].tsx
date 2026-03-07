@@ -18,9 +18,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, Path, Pattern, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -142,30 +141,6 @@ function useLocalAudio() {
   }, []);
 
   return { isPlaying, isLoading, progress, togglePlayback, seekTo };
-}
-
-// ============== DOT PATTERN ==============
-
-function DotPatternBackground() {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Svg width="100%" height="100%">
-        <Defs>
-          <Pattern
-            id="dotPattern"
-            x="0"
-            y="0"
-            width={16 * SCALE}
-            height={16 * SCALE}
-            patternUnits="userSpaceOnUse"
-          >
-            <Circle cx={2 * SCALE} cy={2 * SCALE} r={1.5 * SCALE} fill="rgba(129, 1, 0, 0.12)" />
-          </Pattern>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#dotPattern)" />
-      </Svg>
-    </View>
-  );
 }
 
 // ============== MAIN SCREEN ==============
@@ -407,7 +382,6 @@ export default function SharedEntryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      <DotPatternBackground />
 
       {/* Header */}
       <View style={styles.topBar}>
@@ -424,7 +398,7 @@ export default function SharedEntryScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Share info bar */}
-        <Animated.View entering={FadeInDown.delay(100).springify().damping(15)} style={styles.shareInfoBar}>
+        <View style={styles.shareInfoBar}>
           <View style={styles.shareInfoLeft}>
             <View style={styles.typeBadge}>
               <Text style={styles.typeBadgeText}>{typeLabel}</Text>
@@ -437,33 +411,33 @@ export default function SharedEntryScreen() {
               {viewCount} {viewCount === 1 ? 'view' : 'views'}
             </Text>
           </View>
-        </Animated.View>
+        </View>
 
         {/* The actual timeline card */}
-        <Animated.View entering={FadeInDown.delay(200).springify().damping(15)} style={styles.cardContainer}>
+        <View style={styles.cardContainer}>
           {renderEntryCard()}
-        </Animated.View>
+        </View>
 
         {/* Caption (if present and not already shown in card) */}
         {entry.caption && entry.type !== 'audio' && entry.type !== 'photo' && entry.type !== 'video' && (
-          <Animated.View entering={FadeInDown.delay(300).springify().damping(15)} style={styles.captionCard}>
+          <View style={styles.captionCard}>
             <Text style={styles.captionText}>{entry.caption}</Text>
-          </Animated.View>
+          </View>
         )}
 
         {/* Full story content (below the preview card) */}
         {entry.type === 'story' && (
-          <Animated.View entering={FadeInDown.delay(350).springify().damping(15)}>
+          <View>
             {renderStoryFullContent()}
-          </Animated.View>
+          </View>
         )}
 
         {/* Branding Footer */}
-        <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.brandingFooter}>
+        <View style={styles.brandingFooter}>
           <View style={styles.brandingDivider} />
           <Text style={styles.brandingText}>Shared via Fold</Text>
           <Text style={styles.brandingSubtext}>Your private memory vault</Text>
-        </Animated.View>
+        </View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -596,11 +570,6 @@ const styles = StyleSheet.create({
   cardContainer: {
     alignItems: 'center',
     marginBottom: 16 * SCALE,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.12,
-    shadowRadius: 36,
-    elevation: 8,
   },
 
   // Caption
