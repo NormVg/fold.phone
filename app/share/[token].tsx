@@ -18,8 +18,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Defs, Path, Pattern, Rect } from 'react-native-svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
@@ -141,6 +142,30 @@ function useLocalAudio() {
   }, []);
 
   return { isPlaying, isLoading, progress, togglePlayback, seekTo };
+}
+
+// ============== DOT PATTERN ==============
+
+function DotPatternBackground() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Svg width="100%" height="100%">
+        <Defs>
+          <Pattern
+            id="dotPattern"
+            x="0"
+            y="0"
+            width={16 * SCALE}
+            height={16 * SCALE}
+            patternUnits="userSpaceOnUse"
+          >
+            <Circle cx={2 * SCALE} cy={2 * SCALE} r={1.5 * SCALE} fill="rgba(129, 1, 0, 0.12)" />
+          </Pattern>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#dotPattern)" />
+      </Svg>
+    </View>
+  );
 }
 
 // ============== MAIN SCREEN ==============
@@ -382,6 +407,7 @@ export default function SharedEntryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <DotPatternBackground />
 
       {/* Header */}
       <View style={styles.topBar}>
@@ -398,7 +424,7 @@ export default function SharedEntryScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Share info bar */}
-        <View style={styles.shareInfoBar}>
+        <Animated.View entering={FadeInDown.delay(100).springify().damping(15)} style={styles.shareInfoBar}>
           <View style={styles.shareInfoLeft}>
             <View style={styles.typeBadge}>
               <Text style={styles.typeBadgeText}>{typeLabel}</Text>
@@ -411,22 +437,33 @@ export default function SharedEntryScreen() {
               {viewCount} {viewCount === 1 ? 'view' : 'views'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* The actual timeline card */}
-        <View style={styles.cardContainer}>
+        <Animated.View entering={FadeInDown.delay(200).springify().damping(15)} style={styles.cardContainer}>
           {renderEntryCard()}
-        </View>
+        </Animated.View>
 
         {/* Caption (if present and not already shown in card) */}
         {entry.caption && entry.type !== 'audio' && entry.type !== 'photo' && entry.type !== 'video' && (
-          <View style={styles.captionCard}>
+          <Animated.View entering={FadeInDown.delay(300).springify().damping(15)} style={styles.captionCard}>
             <Text style={styles.captionText}>{entry.caption}</Text>
-          </View>
+          </Animated.View>
         )}
 
         {/* Full story content (below the preview card) */}
-        {renderStoryFullContent()}
+        {entry.type === 'story' && (
+          <Animated.View entering={FadeInDown.delay(350).springify().damping(15)}>
+            {renderStoryFullContent()}
+          </Animated.View>
+        )}
+
+        {/* Branding Footer */}
+        <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.brandingFooter}>
+          <View style={styles.brandingDivider} />
+          <Text style={styles.brandingText}>Shared via Fold</Text>
+          <Text style={styles.brandingSubtext}>Your private memory vault</Text>
+        </Animated.View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -559,6 +596,11 @@ const styles = StyleSheet.create({
   cardContainer: {
     alignItems: 'center',
     marginBottom: 16 * SCALE,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 36,
+    elevation: 8,
   },
 
   // Caption
@@ -607,6 +649,32 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: COLORS.text,
     lineHeight: 26 * SCALE,
+  },
+
+  // Branding footer
+  brandingFooter: {
+    alignItems: 'center',
+    paddingTop: 32 * SCALE,
+    paddingBottom: 24 * SCALE,
+  },
+  brandingDivider: {
+    width: 48 * SCALE,
+    height: 3 * SCALE,
+    borderRadius: 1.5 * SCALE,
+    backgroundColor: COLORS.primary,
+    marginBottom: 16 * SCALE,
+  },
+  brandingText: {
+    fontFamily: 'SignPainter',
+    fontSize: 26 * SCALE,
+    color: COLORS.primary,
+    marginBottom: 4 * SCALE,
+  },
+  brandingSubtext: {
+    fontSize: 12 * SCALE,
+    color: '#8A8780',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 
   bottomPadding: {
