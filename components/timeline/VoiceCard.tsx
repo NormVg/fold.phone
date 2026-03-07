@@ -145,10 +145,18 @@ function AudioWaveform({
     });
 
   const tapGesture = Gesture.Tap()
+    .onBegin(() => {
+      isScrubbing.value = true;
+      runOnJS(startDragging)();
+    })
     .onEnd((e) => {
       const finalVal = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
       scrubProgress.value = finalVal;
       runOnJS(handleSeek)(finalVal);
+    })
+    .onFinalize(() => {
+      isScrubbing.value = false;
+      runOnJS(stopDragging)();
     });
 
   const composedGesture = Gesture.Exclusive(panGesture, tapGesture);

@@ -10,6 +10,7 @@ interface AudioState {
   loadingEntryId: string | null;
   isLoadingAudio: boolean;
   playbackProgress: number;
+  isSeeking: boolean;
 
   // Actions
   togglePlayback: (entryId: string, uri: string) => Promise<void>;
@@ -22,6 +23,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   loadingEntryId: null,
   isLoadingAudio: false,
   playbackProgress: 0,
+  isSeeking: false,
 
   stopPlayback: async () => {
     if (_soundRef) {
@@ -37,14 +39,20 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   seekTo: async (progress: number) => {
     if (!_soundRef) return;
     try {
+      // Optimistically update the UI to prevent slider from snapping back while AV catches up
+      set({ isSeeking: true, playbackProgress: progress });
       const status = await _soundRef.getStatusAsync();
       if ('durationMillis' in status && status.durationMillis) {
         const positionMillis = status.durationMillis * Math.max(0, Math.min(1, progress));
         await _soundRef.setPositionAsync(positionMillis);
-        set({ playbackProgress: progress });
       }
     } catch (error) {
       console.error('Audio seek error:', error);
+    } finally {
+      // Small debounce before we start listening to the real AV playback progress again
+      setTimeout(() => {
+        set({ isSeeking: false });
+      }, 150);
     }
   },
 
@@ -88,7 +96,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if ('isLoaded' in status && status.isLoaded) {
-          if (status.durationMillis && status.positionMillis) {
+          if (status.durationMillis && status.positionMillis && !get().isSeeking) {
             set({ playbackProgress: status.positionMillis / status.durationMillis });
           }
           if (status.didJustFinish) {
