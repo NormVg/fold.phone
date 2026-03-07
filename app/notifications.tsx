@@ -1,6 +1,7 @@
 import { TimelineColors } from '@/constants/theme';
+import { useNotificationStore, type AppNotification } from '@/lib/store/notification-store';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -14,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 // @ts-ignore
 import config from '../fold.config.js';
 
@@ -33,7 +34,21 @@ type NotificationType = {
 export default function NotificationsScreen() {
   const router = useRouter();
   const [pushEnabled, setPushEnabled] = useState(false);
-  
+
+  // Realtime notification state from Ably
+  const notifications = useNotificationStore((s) => s.notifications);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const isConnected = useNotificationStore((s) => s.isConnected);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
+  const clearAll = useNotificationStore((s) => s.clearAll);
+
+  // Mark all as read when screen mounts
+  useEffect(() => {
+    if (unreadCount > 0) {
+      markAllRead();
+    }
+  }, []);
+
   // Initialize notification states from config defaults
   const notificationTypes: NotificationType[] = config.notifications.types;
   const [notificationStates, setNotificationStates] = useState<Record<string, boolean>>(
@@ -42,11 +57,11 @@ export default function NotificationsScreen() {
       return acc;
     }, {})
   );
-  
+
   const toggleNotification = (id: string, value: boolean) => {
     setNotificationStates(prev => ({ ...prev, [id]: value }));
   };
-  
+
   // Icon mapping
   const getIcon = (iconName: string, size: number) => {
     switch (iconName) {
@@ -70,8 +85,8 @@ export default function NotificationsScreen() {
         'To enable push notifications, you\'ll need to install the full app from the App Store or Google Play.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Settings', 
+          {
+            text: 'Open Settings',
             onPress: () => {
               Linking.openSettings();
               setPushEnabled(true);
@@ -93,11 +108,24 @@ export default function NotificationsScreen() {
         <Pressable onPress={handleBack} style={styles.backButton}>
           <BackIcon size={24 * SCALE} />
         </Pressable>
-        <Text style={styles.topBarTitle}>Notifications</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={styles.topBarTitle}>Notifications</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 * SCALE, marginTop: 2 * SCALE }}>
+            <View style={{
+              width: 6 * SCALE,
+              height: 6 * SCALE,
+              borderRadius: 3 * SCALE,
+              backgroundColor: isConnected ? '#4CAF50' : '#999',
+            }} />
+            <Text style={{ fontSize: 10 * SCALE, color: '#888', fontWeight: '500' }}>
+              {isConnected ? 'Live' : 'Offline'}
+            </Text>
+          </View>
+        </View>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -125,6 +153,65 @@ export default function NotificationsScreen() {
               />
             </View>
           </View>
+        </View>
+
+        {/* Realtime Notification Feed */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {notifications.length > 0 && (
+              <Pressable onPress={clearAll} hitSlop={8}>
+                <Text style={{ fontSize: 12 * SCALE, fontWeight: '600', color: '#C62828' }}>Clear All</Text>
+              </Pressable>
+            )}
+          </View>
+          {notifications.length === 0 ? (
+            <View style={styles.card}>
+              <View style={[styles.settingsRow, { justifyContent: 'center', paddingVertical: 28 * SCALE }]}>
+                <Text style={{ fontSize: 14 * SCALE, color: '#999', textAlign: 'center' }}>
+                  No notifications yet.{"\n"}New activity will appear here in realtime.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {notifications.map((notif: AppNotification, index: number) => {
+                const time = new Date(notif.receivedAt).toLocaleTimeString('en-US', {
+                  hour: 'numeric', minute: '2-digit', hour12: true,
+                });
+                return (
+                  <React.Fragment key={notif.id}>
+                    {index > 0 && <View style={styles.divider} />}
+                    <View style={[
+                      styles.settingsRow,
+                      !notif.read && { backgroundColor: 'rgba(129, 1, 0, 0.03)' },
+                    ]}>
+                      <View style={styles.rowLeft}>
+                        <BellIcon size={18 * SCALE} />
+                        <View style={styles.rowTextContainer}>
+                          <Text style={styles.rowLabel}>{notif.title}</Text>
+                          {notif.body ? (
+                            <Text style={styles.rowDescription} numberOfLines={2}>{notif.body}</Text>
+                          ) : null}
+                          <Text style={{ fontSize: 10 * SCALE, color: '#aaa', marginTop: 2 * SCALE }}>{time}</Text>
+                        </View>
+                      </View>
+                      <View style={{
+                        backgroundColor: 'rgba(129, 1, 0, 0.1)',
+                        borderRadius: 6 * SCALE,
+                        paddingHorizontal: 6 * SCALE,
+                        paddingVertical: 2 * SCALE,
+                      }}>
+                        <Text style={{ fontSize: 9 * SCALE, fontWeight: '600', color: TimelineColors.primary }}>
+                          {notif.type.replace(/_/g, ' ').toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Notification Types Section */}
@@ -167,7 +254,7 @@ export default function NotificationsScreen() {
             {config.infoMessages.notifications}
           </Text>
         </View>
-        
+
         <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
