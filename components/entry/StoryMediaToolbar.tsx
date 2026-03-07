@@ -57,6 +57,45 @@ function LocationIcon({ size = ICON_SIZE }: IconProps) {
   );
 }
 
+// Connect icon - two-person icon for sharing to Connect
+function ConnectToggleIcon({ size = ICON_SIZE, active = false }: IconProps & { active?: boolean }) {
+  const strokeColor = active ? '#FFFFFF' : '#1A7A7A';
+  return (
+    <View style={{
+      width: size * SCALE,
+      height: size * SCALE,
+      borderRadius: (size / 2) * SCALE,
+      backgroundColor: active ? '#1A7A7A' : 'rgba(26, 122, 122, 0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      <Svg width={20 * SCALE} height={20 * SCALE} viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+          stroke={strokeColor}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+          stroke={strokeColor}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+          stroke={strokeColor}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </View>
+  );
+}
+
 // Small white location icon for tag
 function LocationTagIcon({ size = 12 }: IconProps) {
   return (
@@ -144,6 +183,8 @@ export interface StoryMediaToolbarProps {
   onLocationPress?: () => void;
   location?: string | null;
   onClearLocation?: () => void;
+  connectActive?: boolean;
+  onConnectToggle?: () => void;
 }
 
 export function StoryMediaToolbar({
@@ -152,6 +193,8 @@ export function StoryMediaToolbar({
   onLocationPress,
   location,
   onClearLocation,
+  connectActive,
+  onConnectToggle,
 }: StoryMediaToolbarProps) {
   return (
     <View style={styles.container}>
@@ -173,6 +216,13 @@ export function StoryMediaToolbar({
           <LocationIcon />
         </MediaButton>
       )}
+
+      {/* Connect toggle */}
+      {onConnectToggle && (
+        <MediaButton onPress={onConnectToggle}>
+          <ConnectToggleIcon active={connectActive} />
+        </MediaButton>
+      )}
     </View>
   );
 }
@@ -192,12 +242,14 @@ const styles = StyleSheet.create({
     borderRadius: 16 * SCALE,
     gap: 4 * SCALE,
     height: ICON_SIZE * SCALE,
+    flexShrink: 1,
+    maxWidth: 85 * SCALE,
   },
   locationTagText: {
     color: '#FFFFFF',
     fontSize: 11 * SCALE,
     fontWeight: '500',
-    maxWidth: 80 * SCALE,
+    flexShrink: 1,
   },
   locationTagClose: {
     marginLeft: 2 * SCALE,

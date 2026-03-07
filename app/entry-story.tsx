@@ -1,5 +1,6 @@
 import { MediaPickerSheet, StoryMediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood/MoodPicker';
+import { shareToConnect } from '@/lib/api';
 import { validateMediaSize } from '@/lib/media';
 import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
@@ -287,6 +288,7 @@ export default function EntryStoryScreen() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
   const [videoPickerVisible, setVideoPickerVisible] = useState(false);
+  const [shareWithConnect, setShareWithConnect] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -329,7 +331,7 @@ export default function EntryStoryScreen() {
         }
       })();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLocation]);
 
   const handleClose = () => {
@@ -660,6 +662,9 @@ export default function EntryStoryScreen() {
       });
 
       if (!result) return; // addEntry already showed an alert
+      if (shareWithConnect && result.id) {
+        shareToConnect(result.id).catch(e => console.warn('[Connect] Auto-share failed:', e));
+      }
 
       // Navigate to timeline
       if (router.canGoBack()) {
@@ -758,6 +763,8 @@ export default function EntryStoryScreen() {
             onLocationPress={handleAddLocation}
             location={location}
             onClearLocation={() => setLocation(null)}
+            connectActive={shareWithConnect}
+            onConnectToggle={() => setShareWithConnect(prev => !prev)}
           />
           <Text style={[styles.charCounter, { color: counterColor }]}>
             {item.content.length}/{CHAR_LIMIT}

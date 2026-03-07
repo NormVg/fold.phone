@@ -1,5 +1,6 @@
 import { MediaPickerSheet, MediaToolbar } from '@/components/entry';
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { shareToConnect } from '@/lib/api';
 import { validateMediaSize } from '@/lib/media';
 import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
@@ -90,6 +91,7 @@ export default function EntryTextScreen() {
   });
   const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
   const [videoPickerVisible, setVideoPickerVisible] = useState(false);
+  const [shareWithConnect, setShareWithConnect] = useState(false);
 
   const handleClose = () => {
     router.back();
@@ -332,6 +334,9 @@ export default function EntryTextScreen() {
             location: location || undefined,
           });
           if (!result) return; // addEntry already showed an alert
+          if (shareWithConnect && result.id) {
+            shareToConnect(result.id).catch(e => console.warn('[Connect] Auto-share failed:', e));
+          }
         }
 
         // Save each video as separate entry
@@ -353,6 +358,9 @@ export default function EntryTextScreen() {
             location: location || undefined,
           });
           if (!result) return; // addEntry already showed an alert
+          if (shareWithConnect && result.id) {
+            shareToConnect(result.id).catch(e => console.warn('[Connect] Auto-share failed:', e));
+          }
         }
       } else {
         // No media, just text entry
@@ -364,6 +372,9 @@ export default function EntryTextScreen() {
           media: [],
         });
         if (!result) return;
+        if (shareWithConnect && result.id) {
+          shareToConnect(result.id).catch(e => console.warn('[Connect] Auto-share failed:', e));
+        }
       }
 
       console.log('Folding memory:', { textContent, selectedMood, location, mediaCount: attachedMedia.length });
@@ -448,6 +459,8 @@ export default function EntryTextScreen() {
               onLocationPress={handleAddLocation}
               location={location}
               onClearLocation={() => setLocation(null)}
+              connectActive={shareWithConnect}
+              onConnectToggle={() => setShareWithConnect(prev => !prev)}
             />
           </View>
 
@@ -467,7 +480,7 @@ export default function EntryTextScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Fold It Button - rect x=21 y=776 w=350 h=50 rx=25 */}
+      {/* Fold It Button */}
       <View style={styles.footer}>
         <Pressable
           style={({ pressed }) => [

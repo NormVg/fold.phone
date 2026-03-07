@@ -1,4 +1,5 @@
 import { MoodPicker, type MoodType } from '@/components/mood';
+import { shareToConnect } from '@/lib/api';
 import { useSettings } from '@/lib/settings-context';
 import { useTimeline } from '@/lib/timeline-context';
 import { Audio } from 'expo-av';
@@ -143,6 +144,27 @@ function LocationIcon({ size = 37 }: { size?: number }) {
   );
 }
 
+// Connect toggle icon - teal people icon
+function ConnectToggleIcon({ size = 37, active = false }: { size?: number; active?: boolean }) {
+  const strokeColor = active ? '#FFFFFF' : '#1A7A7A';
+  return (
+    <View style={{
+      width: size * SCALE,
+      height: size * SCALE,
+      borderRadius: (size / 2) * SCALE,
+      backgroundColor: active ? '#1A7A7A' : 'rgba(26, 122, 122, 0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      <Svg width={20 * SCALE} height={20 * SCALE} viewBox="0 0 24 24" fill="none">
+        <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={strokeColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke={strokeColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={strokeColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    </View>
+  );
+}
+
 // Small white location icon for tag
 function LocationTagIcon({ size = 12 }: { size?: number }) {
   return (
@@ -274,6 +296,7 @@ export default function NewMemoryScreen() {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [location, setLocation] = useState<string | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [shareWithConnect, setShareWithConnect] = useState(false);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -353,7 +376,7 @@ export default function NewMemoryScreen() {
         console.warn('Auto-location failed silently:', err);
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted, autoLocation]);
 
   const stopAllTimers = () => {
@@ -602,6 +625,9 @@ export default function NewMemoryScreen() {
       });
 
       if (!result) return; // addEntry already showed an alert
+      if (shareWithConnect && result.id) {
+        shareToConnect(result.id).catch(e => console.warn('[Connect] Auto-share failed:', e));
+      }
 
       console.log('Folding memory:', { recordingUri: finalUri, recordingTime, selectedMood, caption });
       if (router.canGoBack()) {
@@ -680,27 +706,40 @@ export default function NewMemoryScreen() {
                 multiline
               />
 
-              {/* Show animated tag if location is set, otherwise show location icon */}
-              {location ? (
-                <AnimatedLocationTag
-                  location={location}
-                  onClear={() => setLocation(null)}
-                />
-              ) : (
+              {/* Location + Connect icons */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 * SCALE }}>
+                {location ? (
+                  <AnimatedLocationTag
+                    location={location}
+                    onClear={() => setLocation(null)}
+                  />
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.captionAddButton,
+                      {
+                        opacity: pressed || isLoadingLocation ? 0.7 : 1,
+                        transform: [{ scale: pressed ? 0.95 : 1 }],
+                      }
+                    ]}
+                    onPress={handleAddLocation}
+                    disabled={isLoadingLocation}
+                  >
+                    <LocationIcon size={37} />
+                  </Pressable>
+                )}
+
+                {/* Connect toggle */}
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.captionAddButton,
-                    {
-                      opacity: pressed || isLoadingLocation ? 0.7 : 1,
-                      transform: [{ scale: pressed ? 0.95 : 1 }],
-                    }
-                  ]}
-                  onPress={handleAddLocation}
-                  disabled={isLoadingLocation}
+                  style={({ pressed }) => [{
+                    opacity: pressed ? 0.7 : 1,
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                  }]}
+                  onPress={() => setShareWithConnect(prev => !prev)}
                 >
-                  <LocationIcon size={37} />
+                  <ConnectToggleIcon size={37} active={shareWithConnect} />
                 </Pressable>
-              )}
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -916,12 +955,14 @@ const styles = StyleSheet.create({
     borderRadius: 16 * SCALE,
     gap: 4 * SCALE,
     height: 37 * SCALE,
+    flexShrink: 1,
+    maxWidth: 85 * SCALE,
   },
   animatedLocationTagText: {
     color: '#FFFFFF',
     fontSize: 11 * SCALE,
     fontWeight: '500',
-    maxWidth: 70 * SCALE,
+    flexShrink: 1,
   },
   animatedLocationTagClose: {
     marginLeft: 2 * SCALE,
