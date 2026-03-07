@@ -1,7 +1,7 @@
-import { HubCalendar, HubPanelGrid } from '@/components/hub';
-import { MonthYearPicker } from '@/components/hub/MonthYearPicker';
 import { ConnectTimeline, ConnectTransitionOverlay } from '@/components/connect';
 import type { TransitionMode } from '@/components/connect/ConnectTransitionOverlay';
+import { HubCalendar, HubPanelGrid } from '@/components/hub';
+import { MonthYearPicker } from '@/components/hub/MonthYearPicker';
 import {
   BadgesSection,
   FoldDataCards,
@@ -13,18 +13,19 @@ import {
 import { ShareLoadingOverlay, ShareSheet } from '@/components/shares';
 import { BottomNavBar, PhotoCard, StoryCard, TextCard, TimelineHeader, TimelineSkeletonLoader, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
-import { useAuth } from '@/lib/store/auth-store';
-import { useAudio } from '@/lib/store/audio-store';
+import type { TimelineEntryResponse } from '@/lib/api';
+import { getConnectMemories, getConnectStatus, unshareFromConnect, type ConnectActiveConnection } from '@/lib/api';
+import { validateMediaSize } from '@/lib/media';
 import { useProfileStats } from '@/lib/profile-hooks';
-import { useTimeline } from '@/lib/store/timeline-store';
-import type { OnThisDayGroup, TimelineEntryResponse } from '@/lib/api';
-import { getConnectStatus, getConnectMemories, unshareFromConnect, type ConnectActiveConnection } from '@/lib/api';
+import { useAudio } from '@/lib/store/audio-store';
+import { useAuth } from '@/lib/store/auth-store';
+import { useSettings } from '@/lib/store/settings-store';
+import { useTimeline, useTimelineStore } from '@/lib/store/timeline-store';
 import { useHubActivity } from '@/lib/use-hub-activity';
 import { useShareEntry } from '@/lib/use-share-entry';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useSettings } from '@/lib/store/settings-store';
-import { useTimelineStore } from '@/lib/store/timeline-store';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Dimensions, Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -166,6 +167,59 @@ export default function MainScreen() {
   const handleCapturePress = () => router.push('/entry-text'); // Tap -> text entry
   const handleCaptureLongPress = () => router.push('/entry-audio'); // Long press -> voice recording
   const handleCaptureDoubleTap = () => router.push('/entry-story'); // Double tap -> story mode
+
+  // Drag up -> quick capture photo with camera, then open entry page
+  const handleCaptureDragUp = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera access to take photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const err = await validateMediaSize(asset.uri, 'image', asset.fileSize);
+        if (err) { Alert.alert('File Too Large', err); return; }
+        // Navigate to entry page with captured photo pre-attached
+        router.push({ pathname: '/entry-text', params: { mediaUri: asset.uri, mediaType: 'image' } });
+      }
+    } catch (e) {
+      console.error('[QuickCapture] Photo error:', e);
+      Alert.alert('Error', 'Failed to capture photo.');
+    }
+  }, [router]);
+
+  // Drag down -> quick capture video with camera, then open entry page
+  const handleCaptureDragDown = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera access to record video.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        videoMaxDuration: 60,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const sizeErr = await validateMediaSize(asset.uri, 'video', asset.fileSize);
+        if (sizeErr) { Alert.alert('File Too Large', sizeErr); return; }
+        const durationSec = asset.duration ? Math.round(asset.duration / 1000) : 0;
+        // Navigate to entry page with captured video pre-attached
+        router.push({ pathname: '/entry-text', params: { mediaUri: asset.uri, mediaType: 'video', mediaDuration: String(durationSec) } });
+      }
+    } catch (e) {
+      console.error('[QuickCapture] Video error:', e);
+      Alert.alert('Error', 'Failed to capture video.');
+    }
+  }, [router]);
+
   const handleHomePress = () => navigateToPage(PAGE_TIMELINE); // Home btn on hub/profile
   const handleProfilePress = () => navigateToPage(PAGE_PROFILE);
 
@@ -467,10 +521,10 @@ export default function MainScreen() {
                   onPrevMonth={handlePrevMonth}
                   onNextMonth={handleNextMonth}
                   onMonthYearPress={() => setShowMonthPicker(true)}
-                    onDayPress={(day) => {
-                      const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                      router.push({ pathname: '/day-view', params: { date: dateStr } });
-                    }}
+                  onDayPress={(day) => {
+                    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    router.push({ pathname: '/day-view', params: { date: dateStr } });
+                  }}
                 />
                 <HubPanelGrid
                   onStoriesPress={() => router.push('/stories')}
@@ -496,93 +550,93 @@ export default function MainScreen() {
               {connectMode && activeConnection ? (
                 <ConnectTimeline connection={activeConnection} onSharePress={handleSharePress} />
               ) : (
-              <View style={styles.timelineWrapper}>
-                <View style={styles.timelineLine} />
-                <ScrollView
-                  style={styles.pageContent}
-                  contentContainerStyle={styles.timelineScrollContent}
-                  showsVerticalScrollIndicator={false}
-                  refreshControl={
-                    <RefreshControl
-                      refreshing={timelineRefreshing}
-                      onRefresh={onTimelineRefresh}
-                      tintColor={TimelineColors.primary}
-                      colors={[TimelineColors.primary]}
-                    />
-                  }
-                >
-                  {/* ── Section A: Today's entries ── */}
-                  {todayEntries.map((entry) => (
-                    <View key={entry.id} style={styles.cardWrapper}>
-                      {renderEntryCard(entry)}
-                    </View>
-                  ))}
-
-                  {/* ── Section B: "ON THIS DAY" divider ── */}
-                  {hasOnThisDay && (
-                    <View style={styles.onThisDayDivider}>
-                      <View style={styles.dividerLine} />
-                      <View style={styles.dividerPill}>
-                        <Text style={styles.dividerPillText}>ON THIS DAY</Text>
+                <View style={styles.timelineWrapper}>
+                  <View style={styles.timelineLine} />
+                  <ScrollView
+                    style={styles.pageContent}
+                    contentContainerStyle={styles.timelineScrollContent}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={timelineRefreshing}
+                        onRefresh={onTimelineRefresh}
+                        tintColor={TimelineColors.primary}
+                        colors={[TimelineColors.primary]}
+                      />
+                    }
+                  >
+                    {/* ── Section A: Today's entries ── */}
+                    {todayEntries.map((entry) => (
+                      <View key={entry.id} style={styles.cardWrapper}>
+                        {renderEntryCard(entry)}
                       </View>
-                      <View style={styles.dividerLine} />
-                    </View>
-                  )}
+                    ))}
 
-                  {/* ── Section C: Past year groups ── */}
-                  {onThisDayGroups.map((group) => (
-                    <View key={group.year}>
-                      {/* Year label pill on the timeline line */}
-                      <View style={styles.yearLabelRow}>
-                        <View style={styles.yearPill}>
-                          <Text style={styles.yearPillText}>{group.year}</Text>
+                    {/* ── Section B: "ON THIS DAY" divider ── */}
+                    {hasOnThisDay && (
+                      <View style={styles.onThisDayDivider}>
+                        <View style={styles.dividerLine} />
+                        <View style={styles.dividerPill}>
+                          <Text style={styles.dividerPillText}>ON THIS DAY</Text>
+                        </View>
+                        <View style={styles.dividerLine} />
+                      </View>
+                    )}
+
+                    {/* ── Section C: Past year groups ── */}
+                    {onThisDayGroups.map((group) => (
+                      <View key={group.year}>
+                        {/* Year label pill on the timeline line */}
+                        <View style={styles.yearLabelRow}>
+                          <View style={styles.yearPill}>
+                            <Text style={styles.yearPillText}>{group.year}</Text>
+                          </View>
+                        </View>
+                        {group.entries.map((entry: TimelineEntryResponse) => (
+                          <View key={entry.id} style={[styles.cardWrapper, { opacity: 0.85 }]}>
+                            {renderEntryCard({
+                              ...entry,
+                              media: (entry.media || []).map((m) => ({
+                                id: m.id,
+                                uri: m.uri,
+                                type: m.type,
+                                thumbnailUri: m.thumbnailUri,
+                                duration: m.duration,
+                              })),
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+
+                    {/* Loading skeleton */}
+                    {isTimelineLoading && entries.length === 0 && (
+                      <TimelineSkeletonLoader />
+                    )}
+
+                    {/* ── Section D: Beautiful empty state ── */}
+                    {!isTimelineLoading && !hasAnything && (
+                      <View style={styles.cardWrapper}>
+                        <View style={styles.emptyStateCard}>
+                          <View style={styles.emptyIconCircle}>
+                            <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
+                              <Path
+                                d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76zM17 3l4 4"
+                                stroke={TimelineColors.primary}
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          </View>
+                          <Text style={styles.emptyTitle}>Your story starts here</Text>
+                          <Text style={styles.emptySubtitle}>Tap below to capture your first memory</Text>
+                          <View style={styles.emptyAccentStrip} />
                         </View>
                       </View>
-                      {group.entries.map((entry: TimelineEntryResponse) => (
-                        <View key={entry.id} style={[styles.cardWrapper, { opacity: 0.85 }]}>
-                          {renderEntryCard({
-                            ...entry,
-                            media: (entry.media || []).map((m) => ({
-                              id: m.id,
-                              uri: m.uri,
-                              type: m.type,
-                              thumbnailUri: m.thumbnailUri,
-                              duration: m.duration,
-                            })),
-                          })}
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-
-                  {/* Loading skeleton */}
-                  {isTimelineLoading && entries.length === 0 && (
-                    <TimelineSkeletonLoader />
-                  )}
-
-                  {/* ── Section D: Beautiful empty state ── */}
-                  {!isTimelineLoading && !hasAnything && (
-                    <View style={styles.cardWrapper}>
-                      <View style={styles.emptyStateCard}>
-                        <View style={styles.emptyIconCircle}>
-                          <Svg width={24 * SCALE} height={24 * SCALE} viewBox="0 0 24 24" fill="none">
-                            <Path
-                              d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76zM17 3l4 4"
-                              stroke={TimelineColors.primary}
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
-                        </View>
-                        <Text style={styles.emptyTitle}>Your story starts here</Text>
-                        <Text style={styles.emptySubtitle}>Tap below to capture your first memory</Text>
-                        <View style={styles.emptyAccentStrip} />
-                      </View>
-                    </View>
-                  )}
-                </ScrollView>
-              </View>
+                    )}
+                  </ScrollView>
+                </View>
               )}
             </View>
 
@@ -692,6 +746,8 @@ export default function MainScreen() {
         onCaptureLongPress={handleCaptureLongPress}
         onHomePress={handleHomePress}
         onProfilePress={handleProfilePress}
+        onCaptureDragUp={handleCaptureDragUp}
+        onCaptureDragDown={handleCaptureDragDown}
       />
     </SafeAreaView>
   );

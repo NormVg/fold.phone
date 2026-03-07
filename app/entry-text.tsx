@@ -6,7 +6,7 @@ import { useTimeline } from '@/lib/timeline-context';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoLocation from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import React, { useEffect, useState } from 'react';
 import {
@@ -73,13 +73,21 @@ function LocationIcon({ size = 24 }: { size?: number }) {
 
 export default function EntryTextScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mediaUri?: string; mediaType?: 'image' | 'video'; mediaDuration?: string }>();
   const { addEntry, isSaving } = useTimeline();
   const { autoLocation } = useSettings();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [textContent, setTextContent] = useState('');
   const [location, setLocation] = useState<string | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [attachedMedia, setAttachedMedia] = useState<{ uri: string; type: 'image' | 'video'; duration?: number }[]>([]);
+  const [attachedMedia, setAttachedMedia] = useState<{ uri: string; type: 'image' | 'video'; duration?: number }[]>(() => {
+    // Pre-attach media from route params (e.g. from quick camera capture)
+    if (params.mediaUri && params.mediaType) {
+      const duration = params.mediaDuration ? parseInt(params.mediaDuration, 10) : undefined;
+      return [{ uri: params.mediaUri, type: params.mediaType, duration }];
+    }
+    return [];
+  });
   const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
   const [videoPickerVisible, setVideoPickerVisible] = useState(false);
 
@@ -120,7 +128,7 @@ export default function EntryTextScreen() {
         }
       })();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLocation]);
 
   // Photo button — opens picker sheet

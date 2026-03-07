@@ -1,17 +1,24 @@
 import { CaptureAddIcon, GridIcon, HomeIcon, ProfileIcon } from '@/components/icons';
 import { TimelineColors } from '@/constants/theme';
+import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
-import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   Easing,
   interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393; // Design is based on 393px width
+
+const DRAG_THRESHOLD = 40; // px to trigger action
+const MAX_DRAG = 100; // visual clamp
 
 export type ActiveTab = 'timeline' | 'hub' | 'profile';
 
@@ -22,6 +29,8 @@ interface BottomNavBarProps {
   onCaptureLongPress?: () => void;
   onHomePress?: () => void;
   onProfilePress?: () => void;
+  onCaptureDragUp?: () => void;
+  onCaptureDragDown?: () => void;
 }
 
 export function BottomNavBar({
@@ -31,6 +40,8 @@ export function BottomNavBar({
   onCaptureLongPress,
   onHomePress,
   onProfilePress,
+  onCaptureDragUp,
+  onCaptureDragDown,
 }: BottomNavBarProps) {
   const isHubActive = activeTab === 'hub';
   const isProfileActive = activeTab === 'profile';
@@ -38,6 +49,10 @@ export function BottomNavBar({
 
   // 0 = home icon, 1 = capture icon
   const progress = useSharedValue(isTimeline ? 1 : 0);
+
+  // Drag state
+  const dragY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
 
   useEffect(() => {
     progress.value = withTiming(isTimeline ? 1 : 0, {
@@ -64,8 +79,139 @@ export function BottomNavBar({
     position: 'absolute' as const,
   }));
 
+  // ── Drag visual feedback ──────────────────────────────────────────
+
+  // Floating hint label that appears above (drag up → photo) or below (drag down → video)
+  const hintUpStyle = useAnimatedStyle(() => {
+    const show = isDragging.value && dragY.value < -15;
+    const normalizedDrag = Math.min(Math.abs(dragY.value), MAX_DRAG) / MAX_DRAG;
+    return {
+      opacity: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0, 0.6, 1]) : 0,
+      transform: [
+        { translateY: show ? interpolate(normalizedDrag, [0, 1], [-20, -55]) : -20 },
+        { scale: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0.6, 0.8, 1]) : 0.6 },
+      ],
+    };
+  });
+
+  const hintDownStyle = useAnimatedStyle(() => {
+    const show = isDragging.value && dragY.value > 15;
+    const normalizedDrag = Math.min(Math.abs(dragY.value), MAX_DRAG) / MAX_DRAG;
+    return {
+      opacity: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0, 0.6, 1]) : 0,
+      transform: [
+        { translateY: show ? interpolate(normalizedDrag, [0, 1], [20, 55]) : 20 },
+        { scale: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0.6, 0.8, 1]) : 0.6 },
+      ],
+    };
+  });
+
+  // Button scale feedback during drag
+  const buttonDragStyle = useAnimatedStyle(() => {
+    if (!isDragging.value) return { transform: [{ scale: 1 }] };
+    const normalizedDrag = Math.min(Math.abs(dragY.value), MAX_DRAG) / MAX_DRAG;
+    return {
+      transform: [{ scale: interpolate(normalizedDrag, [0, 0.5, 1], [1, 1.15, 1.25]) }],
+    };
+  });
+
+  // ── Gesture callbacks (must run on JS thread) ─────────────────────
+
+  const fireHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const fireDragUp = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onCaptureDragUp?.();
+  };
+
+  const fireDragDown = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onCaptureDragDown?.();
+  };
+
+  const fireTap = () => {
+    onCapturePress?.();
+  };
+
+  const fireLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onCaptureLongPress?.();
+  };
+
+  const fireHomeTap = () => {
+    onHomePress?.();
+  };
+
+  // ── Gesture composition ───────────────────────────────────────────
+
+  // Pan gesture for drag up/down
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-15, 15]) // start only after 15px vertical movement
+    .failOffsetX([-20, 20])   // fail if horizontal movement > 20px
+    .onStart(() => {
+      isDragging.value = true;
+      dragY.value = 0;
+    })
+    .onUpdate((e) => {
+      dragY.value = e.translationY;
+      // Haptic tick when crossing threshold
+      if (Math.abs(e.translationY) > DRAG_THRESHOLD && Math.abs(e.translationY) < DRAG_THRESHOLD + 5) {
+        runOnJS(fireHaptic)();
+      }
+    })
+    .onEnd((e) => {
+      isDragging.value = false;
+      dragY.value = withSpring(0, { damping: 15, stiffness: 200 });
+
+      if (e.translationY < -DRAG_THRESHOLD) {
+        runOnJS(fireDragUp)();
+      } else if (e.translationY > DRAG_THRESHOLD) {
+        runOnJS(fireDragDown)();
+      }
+    })
+    .onFinalize(() => {
+      isDragging.value = false;
+      dragY.value = withSpring(0, { damping: 15, stiffness: 200 });
+    });
+
+  // Tap gesture
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => {
+      if (isTimeline) {
+        runOnJS(fireTap)();
+      } else {
+        runOnJS(fireHomeTap)();
+      }
+    });
+
+  // Long press gesture
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(300)
+    .onStart(() => {
+      if (isTimeline) {
+        runOnJS(fireLongPress)();
+      }
+    });
+
+  // Compose: Pan wins over Tap/LongPress if drag detected, otherwise Tap or LongPress
+  const composedGesture = Gesture.Race(
+    panGesture,
+    Gesture.Exclusive(longPressGesture, tapGesture),
+  );
+
   return (
     <View style={styles.container}>
+      {/* Floating hint labels - rendered OUTSIDE the navBar for proper positioning */}
+      <Animated.View style={[styles.hintLabel, styles.hintUp, hintUpStyle]} pointerEvents="none">
+        <Text style={styles.hintText}>📷 Photo</Text>
+      </Animated.View>
+      <Animated.View style={[styles.hintLabel, styles.hintDown, hintDownStyle]} pointerEvents="none">
+        <Text style={styles.hintText}>🎥 Video</Text>
+      </Animated.View>
+
       <View style={styles.navBar}>
         {/* Grid/Hub button */}
         <Pressable
@@ -81,41 +227,39 @@ export function BottomNavBar({
           />
         </Pressable>
 
-        {/* Center button: crossfade between Entry and Home */}
-        <View style={styles.centerSlot}>
-          {/* Home icon layer */}
-          <Animated.View style={homeStyle}>
-            <Pressable
-              onPress={onHomePress}
-              accessibilityLabel="Home"
-              accessibilityRole="button"
-              style={styles.centerHitArea}
-            >
-              <HomeIcon
-                size={24 * SCALE}
-                color={TimelineColors.primary}
-              />
-            </Pressable>
-          </Animated.View>
+        {/* Center button: gesture-enabled crossfade between Entry and Home */}
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[styles.centerSlot, buttonDragStyle]}>
+            {/* Home icon layer */}
+            <Animated.View style={homeStyle}>
+              <View
+                style={styles.centerHitArea}
+                accessibilityLabel="Home"
+                accessibilityRole="button"
+              >
+                <HomeIcon
+                  size={24 * SCALE}
+                  color={TimelineColors.primary}
+                />
+              </View>
+            </Animated.View>
 
-          {/* Capture icon layer */}
-          <Animated.View style={captureStyle}>
-            <Pressable
-              onPress={onCapturePress}
-              onLongPress={onCaptureLongPress}
-              delayLongPress={300}
-              accessibilityLabel="Capture"
-              accessibilityRole="button"
-              style={styles.centerHitArea}
-            >
-              <CaptureAddIcon
-                size={38 * SCALE}
-                color={TimelineColors.primary}
-                backgroundColor={TimelineColors.captureButtonBackground}
-              />
-            </Pressable>
+            {/* Capture icon layer */}
+            <Animated.View style={captureStyle}>
+              <View
+                style={styles.centerHitArea}
+                accessibilityLabel="Capture"
+                accessibilityRole="button"
+              >
+                <CaptureAddIcon
+                  size={38 * SCALE}
+                  color={TimelineColors.primary}
+                  backgroundColor={TimelineColors.captureButtonBackground}
+                />
+              </View>
+            </Animated.View>
           </Animated.View>
-        </View>
+        </GestureDetector>
 
         {/* Profile button */}
         <Pressable
@@ -165,12 +309,14 @@ const styles = StyleSheet.create({
   centerSlot: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 38 * SCALE,
-    height: 38 * SCALE,
+    width: 44 * SCALE,
+    height: 44 * SCALE,
   },
   centerHitArea: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 44 * SCALE,
+    height: 44 * SCALE,
   },
   hubHighlight: {
     position: 'absolute',
@@ -185,5 +331,26 @@ const styles = StyleSheet.create({
     height: 32 * SCALE,
     borderRadius: 16 * SCALE,
     backgroundColor: 'rgba(129, 1, 0, 0.1)',
+  },
+  // Floating hint labels
+  hintLabel: {
+    position: 'absolute',
+    paddingHorizontal: 12 * SCALE,
+    paddingVertical: 6 * SCALE,
+    borderRadius: 16 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.9)',
+    zIndex: 200,
+  },
+  hintUp: {
+    bottom: 60 * SCALE, // above the nav bar
+  },
+  hintDown: {
+    top: 60 * SCALE, // below the nav bar (inside container, relative to bar)
+  },
+  hintText: {
+    color: '#FDFBF7',
+    fontSize: 13 * SCALE,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });
