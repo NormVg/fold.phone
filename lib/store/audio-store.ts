@@ -14,6 +14,7 @@ interface AudioState {
   // Actions
   togglePlayback: (entryId: string, uri: string) => Promise<void>;
   stopPlayback: () => Promise<void>;
+  seekTo: (progress: number) => Promise<void>;
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -31,6 +32,20 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       _soundRef = null;
     }
     set({ playingEntryId: null, loadingEntryId: null, isLoadingAudio: false, playbackProgress: 0 });
+  },
+
+  seekTo: async (progress: number) => {
+    if (!_soundRef) return;
+    try {
+      const status = await _soundRef.getStatusAsync();
+      if ('durationMillis' in status && status.durationMillis) {
+        const positionMillis = status.durationMillis * Math.max(0, Math.min(1, progress));
+        await _soundRef.setPositionAsync(positionMillis);
+        set({ playbackProgress: progress });
+      }
+    } catch (error) {
+      console.error('Audio seek error:', error);
+    }
   },
 
   togglePlayback: async (entryId: string, uri: string) => {

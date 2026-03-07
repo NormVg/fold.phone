@@ -258,7 +258,7 @@ export default function MainScreen() {
   const handleFoldersPress = () => router.push('/media');
 
   // Timeline handlers
-  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId } = useAudio();
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId, seekTo } = useAudio();
 
   // Stop audio when navigating away from this screen
   useFocusEffect(
@@ -369,6 +369,7 @@ export default function MainScreen() {
           isLoading={loadingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
+          onSeek={(progress) => playingEntryId === entry.id && seekTo(progress)}
           onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}

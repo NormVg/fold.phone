@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { getMoodIcon } from './MoodIcons';
 
@@ -19,6 +20,7 @@ interface VoiceCardProps {
   isLoading?: boolean; // Whether audio is currently buffering/loading
   progress?: number; // Playback progress 0-1
   onPlayPress?: () => void;
+  onSeek?: (progress: number) => void;
   onSharePress?: () => void;
   onLocationPress?: () => void;
   onMoodPress?: () => void;
@@ -86,50 +88,92 @@ function ShareIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-// Audio waveform visualization component (with progress)
-function AudioWaveform({ isPlaying = false, progress = 0 }: { isPlaying?: boolean; progress?: number }) {
+// Audio waveform visualization component (with progress and seeking)
+function AudioWaveform({
+  isPlaying = false,
+  progress = 0,
+  onSeek
+}: {
+  isPlaying?: boolean;
+  progress?: number;
+  onSeek?: (progress: number) => void;
+}) {
   // Generate random-ish heights for waveform bars
   const barCount = 32;
   const heights = [4, 8, 12, 18, 14, 8, 16, 22, 12, 6, 14, 20, 10, 16, 24, 18, 8, 12, 20, 14, 10, 18, 24, 16, 8, 14, 10, 18, 22, 12, 8, 6];
-  const progressIndex = Math.floor(progress * barCount);
+
+  // Local state for scrubbing so UI updates smoothly before audio catches up
+  const [scrubProgress, setScrubProgress] = React.useState<number | null>(null);
+  const displayProgress = scrubProgress !== null ? scrubProgress : progress;
+  const progressIndex = Math.floor(displayProgress * barCount);
+
+  const WAVEFORM_WIDTH = 200 * SCALE;
+
+  const panGesture = Gesture.Pan()
+    .onBegin((e) => {
+      if (onSeek) {
+        setScrubProgress(Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH)));
+      }
+    })
+    .onUpdate((e) => {
+      if (onSeek) {
+        setScrubProgress(Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH)));
+      }
+    })
+    .onEnd((e) => {
+      if (onSeek) {
+        const finalProgress = Math.max(0, Math.min(1, e.x / WAVEFORM_WIDTH));
+        onSeek(finalProgress);
+      }
+    })
+    .onFinalize(() => {
+      setScrubProgress(null);
+    })
+    .runOnJS(true);
 
   return (
-    <Svg width={200 * SCALE} height={28 * SCALE} viewBox="0 0 200 28">
-      <Defs>
-        <LinearGradient id="waveGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#181717" />
-          <Stop offset="0.5" stopColor="#810100" />
-          <Stop offset="1" stopColor="#810100" />
-        </LinearGradient>
-        <LinearGradient id="playedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#810100" />
-          <Stop offset="1" stopColor="#810100" />
-        </LinearGradient>
-        <LinearGradient id="unplayedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#CCC" />
-          <Stop offset="1" stopColor="#AAA" />
-        </LinearGradient>
-      </Defs>
-      {Array.from({ length: barCount }, (_, i) => {
-        const x = 2 + i * 6.2;
-        const h = heights[i % heights.length];
-        const y = (28 - h) / 2;
-        // Color bars based on progress when playing
-        const isPlayed = isPlaying && i <= progressIndex;
-        const fillColor = isPlaying ? (isPlayed ? 'url(#playedGradient)' : 'url(#unplayedGradient)') : 'url(#waveGradient)';
-        return (
-          <Rect
-            key={i}
-            x={x}
-            y={y}
-            width="3"
-            height={h}
-            rx="1.5"
-            fill={fillColor}
-          />
-        );
-      })}
-    </Svg>
+    <GestureDetector gesture={panGesture}>
+      <View>
+        <Svg width={WAVEFORM_WIDTH} height={28 * SCALE} viewBox="0 0 200 28">
+          <Defs>
+            <LinearGradient id="waveGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#181717" />
+              <Stop offset="0.5" stopColor="#810100" />
+              <Stop offset="1" stopColor="#810100" />
+            </LinearGradient>
+            <LinearGradient id="playedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#810100" />
+              <Stop offset="1" stopColor="#810100" />
+            </LinearGradient>
+            <LinearGradient id="unplayedGradient" x1="0" y1="14" x2="200" y2="14" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#CCC" />
+              <Stop offset="1" stopColor="#AAA" />
+            </LinearGradient>
+          </Defs>
+          {Array.from({ length: barCount }, (_, i) => {
+            const x = 2 + i * 6.2;
+            const h = heights[i % heights.length];
+            const y = (28 - h) / 2;
+            // Color bars based on progress
+            const isPlayed = i <= progressIndex;
+            // If we are actively scrubbing OR audio is playing, use the play colors
+            const showAsActive = (isPlaying || scrubProgress !== null);
+            const fillColor = showAsActive ? (isPlayed ? 'url(#playedGradient)' : 'url(#unplayedGradient)') : 'url(#waveGradient)';
+            return (
+              <Rect
+                key={i}
+                x={x}
+                y={y}
+                width="3"
+                height={h}
+                rx="1.5"
+                fill={fillColor}
+              />
+            );
+          })}
+        </Svg>
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -143,6 +187,7 @@ export function VoiceCard({
   isLoading = false,
   progress = 0,
   onPlayPress,
+  onSeek,
   onSharePress,
   onLocationPress,
   onMoodPress,
@@ -173,7 +218,7 @@ export function VoiceCard({
             </View>
           ) : isPlaying ? <PauseIcon size={36 * SCALE} /> : <PlayIcon size={36 * SCALE} />}
         </Pressable>
-        <AudioWaveform isPlaying={isPlaying} progress={progress} />
+        <AudioWaveform isPlaying={isPlaying} progress={progress} onSeek={onSeek} />
         <Text style={styles.durationText}>{duration}</Text>
       </View>
 

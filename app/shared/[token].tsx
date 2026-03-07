@@ -3,7 +3,6 @@ import StoryCard from '@/components/timeline/StoryCard';
 import TextCard from '@/components/timeline/TextCard';
 import VideoCard from '@/components/timeline/VideoCard';
 import VoiceCard from '@/components/timeline/VoiceCard';
-import { TimelineColors } from '@/constants/theme';
 import { getPublicShare, type PublicShareEntry } from '@/lib/api';
 import { addToWatchHistory } from '@/lib/watch-history';
 import { Audio } from 'expo-av';
@@ -127,7 +126,21 @@ function useLocalAudio() {
     }
   }, [isPlaying]);
 
-  return { isPlaying, isLoading, progress, togglePlayback };
+  const seekTo = useCallback(async (newProgress: number) => {
+    if (!soundRef.current) return;
+    try {
+      const status = await soundRef.current.getStatusAsync();
+      if ('durationMillis' in status && status.durationMillis) {
+        const positionMillis = status.durationMillis * Math.max(0, Math.min(1, newProgress));
+        await soundRef.current.setPositionAsync(positionMillis);
+        setProgress(newProgress);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return { isPlaying, isLoading, progress, togglePlayback, seekTo };
 }
 
 // ============== MAIN SCREEN ==============
@@ -139,7 +152,7 @@ export default function SharedEntryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { isPlaying, isLoading: audioLoading, progress, togglePlayback } = useLocalAudio();
+  const { isPlaying, isLoading: audioLoading, progress, togglePlayback, seekTo } = useLocalAudio();
 
   useEffect(() => {
     if (!token) return;
@@ -272,6 +285,7 @@ export default function SharedEntryScreen() {
           isPlaying={isPlaying}
           isLoading={audioLoading}
           progress={progress}
+          onSeek={seekTo}
           onPlayPress={() => audioMedia?.uri && togglePlayback(audioMedia.uri)}
         />
       );
@@ -329,10 +343,10 @@ export default function SharedEntryScreen() {
             storyMedia={
               storyMediaItems.length > 0
                 ? storyMediaItems.map(m => ({
-                    uri: m.uri,
-                    type: m.type as 'image' | 'video',
-                    duration: m.duration ?? undefined,
-                  }))
+                  uri: m.uri,
+                  type: m.type as 'image' | 'video',
+                  duration: m.duration ?? undefined,
+                }))
                 : undefined
             }
           />

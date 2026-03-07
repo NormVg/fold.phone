@@ -1,5 +1,5 @@
-import { PhotoCard, StoryCard, TextCard, VideoCard, VoiceCard } from '@/components/timeline';
 import { ShareLoadingOverlay } from '@/components/shares';
+import { PhotoCard, StoryCard, TextCard, VideoCard, VoiceCard } from '@/components/timeline';
 import { TimelineColors } from '@/constants/theme';
 import { getTimelineEntriesByDate, type TimelineEntryResponse } from '@/lib/api';
 import { useAudio } from '@/lib/store/audio-store';
@@ -46,7 +46,7 @@ export default function DayViewScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Audio playback — global store (one audio at a time, stops on screen blur)
-  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId } = useAudio();
+  const { playingEntryId, playbackProgress, togglePlayback, stopPlayback, loadingEntryId, seekTo } = useAudio();
 
   // Stop audio when navigating away
   useFocusEffect(
@@ -99,8 +99,8 @@ export default function DayViewScreen() {
 
   const { shareEntry, sharingEntryId } = useShareEntry();
   const handleSharePress = (entryId?: string) => shareEntry(entryId);
-  const handleLocationPress = () => {};
-  const handleMoodPress = () => {};
+  const handleLocationPress = () => { };
+  const handleMoodPress = () => { };
 
   const renderEntryCard = (entry: TimelineEntryResponse) => {
     const time = new Date(entry.createdAt).toLocaleTimeString('en-US', {
@@ -128,6 +128,7 @@ export default function DayViewScreen() {
           isLoading={loadingEntryId === entry.id}
           progress={playingEntryId === entry.id ? playbackProgress : 0}
           onPlayPress={() => audioMedia?.uri && togglePlayback(entry.id, audioMedia.uri)}
+          onSeek={(progress) => playingEntryId === entry.id && seekTo(progress)}
           onSharePress={() => handleSharePress(entry.id)}
           onLocationPress={handleLocationPress}
           onMoodPress={handleMoodPress}
@@ -205,10 +206,10 @@ export default function DayViewScreen() {
           storyMedia={
             storyMediaItems.length > 0
               ? storyMediaItems.map((m) => ({
-                  uri: m.uri,
-                  type: m.type as 'image' | 'video',
-                  duration: m.duration ?? undefined,
-                }))
+                uri: m.uri,
+                type: m.type as 'image' | 'video',
+                duration: m.duration ?? undefined,
+              }))
               : undefined
           }
           onSharePress={() => handleSharePress(entry.id)}
