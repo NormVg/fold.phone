@@ -100,7 +100,7 @@ export function BottomNavBar({
     return {
       opacity: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0, 0.6, 1]) : 0,
       transform: [
-        { translateY: show ? interpolate(normalizedDrag, [0, 1], [20, 55]) : 20 },
+        { translateY: show ? interpolate(normalizedDrag, [0, 1], [-20, -45]) : -20 },
         { scale: show ? interpolate(normalizedDrag, [0, 0.3, 1], [0.6, 0.8, 1]) : 0.6 },
       ],
     };
@@ -206,10 +206,10 @@ export function BottomNavBar({
     <View style={styles.container}>
       {/* Floating hint labels - rendered OUTSIDE the navBar for proper positioning */}
       <Animated.View style={[styles.hintLabel, styles.hintUp, hintUpStyle]} pointerEvents="none">
-        <Text style={styles.hintText}>📷 Photo</Text>
+        <Text style={styles.hintText}>Photo</Text>
       </Animated.View>
       <Animated.View style={[styles.hintLabel, styles.hintDown, hintDownStyle]} pointerEvents="none">
-        <Text style={styles.hintText}>🎥 Video</Text>
+        <Text style={styles.hintText}>Video</Text>
       </Animated.View>
 
       <View style={styles.navBar}>
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     bottom: 60 * SCALE, // above the nav bar
   },
   hintDown: {
-    top: 60 * SCALE, // below the nav bar (inside container, relative to bar)
+    bottom: 50 * SCALE, // also above the nav bar, closer than photo hint
   },
   hintText: {
     color: '#FDFBF7',

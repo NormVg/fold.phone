@@ -12,6 +12,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
 
+import { registerPushToken } from '@/lib/store/notification-store';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BiometricLockProvider } from '@/lib/biometric-lock';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -44,6 +46,11 @@ function StoreInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Always propagate auth state to timeline store
     useTimelineStore.getState().onAuthChange(isAuthenticated, user?.id ?? null);
+
+    // Register push token when authenticated
+    if (isAuthenticated) {
+      registerPushToken();
+    }
 
     // Only load settings once we have a definitive auth result
     if (isAuthenticated) {
@@ -142,9 +149,9 @@ function ScreenCaptureGuard() {
   useEffect(() => {
     return () => {
       if (activeRef.current) {
-        ScreenCapture.allowScreenCaptureAsync('fold_guard').catch(() => {});
+        ScreenCapture.allowScreenCaptureAsync('fold_guard').catch(() => { });
         if (Platform.OS === 'ios') {
-          ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => {});
+          ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => { });
         }
       }
     };

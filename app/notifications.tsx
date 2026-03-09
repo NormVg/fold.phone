@@ -1,6 +1,9 @@
 import { TimelineColors } from '@/constants/theme';
+import { apiRequest } from '@/lib/api';
+import { registerPushToken } from '@/lib/store/notification-store';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -14,12 +17,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 // @ts-ignore
 import config from '../fold.config.js';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCALE = SCREEN_WIDTH / 393;
+
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 // Notification type from config
 type NotificationType = {
@@ -33,7 +38,8 @@ type NotificationType = {
 export default function NotificationsScreen() {
   const router = useRouter();
   const [pushEnabled, setPushEnabled] = useState(false);
-  
+  const [permissionChecked, setPermissionChecked] = useState(false);
+
   // Initialize notification states from config defaults
   const notificationTypes: NotificationType[] = config.notifications.types;
   const [notificationStates, setNotificationStates] = useState<Record<string, boolean>>(
@@ -42,16 +48,35 @@ export default function NotificationsScreen() {
       return acc;
     }, {})
   );
-  
+
+  // Check actual permission status on mount
+  useEffect(() => {
+    if (isExpoGo) {
+      setPermissionChecked(true);
+      return;
+    }
+    (async () => {
+      try {
+        const Notifications = require('expo-notifications');
+        const { status } = await Notifications.getPermissionsAsync();
+        setPushEnabled(status === 'granted');
+      } catch {
+        // Module not available
+      }
+      setPermissionChecked(true);
+    })();
+  }, []);
+
   const toggleNotification = (id: string, value: boolean) => {
     setNotificationStates(prev => ({ ...prev, [id]: value }));
   };
-  
+
   // Icon mapping
   const getIcon = (iconName: string, size: number) => {
     switch (iconName) {
       case 'clock': return <ClockIcon size={size} />;
       case 'calendar': return <CalendarIcon size={size} />;
+      case 'bell': return <BellIcon size={size} />;
       case 'trophy': return <TrophyIcon size={size} />;
       default: return <BellIcon size={size} />;
     }
@@ -62,25 +87,51 @@ export default function NotificationsScreen() {
   };
 
   const handleTogglePush = async (value: boolean) => {
-    if (value) {
-      // In a development build, we would request permissions here
-      // For now, just toggle the local state
+    if (isExpoGo) {
       Alert.alert(
-        'Enable Notifications',
-        'To enable push notifications, you\'ll need to install the full app from the App Store or Google Play.',
+        'Not Available',
+        'Push notifications require a development build and are not available in Expo Go.'
+      );
+      return;
+    }
+
+    if (value) {
+      try {
+        const Notifications = require('expo-notifications');
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+
+        if (existingStatus === 'granted') {
+          setPushEnabled(true);
+          await registerPushToken();
+          return;
+        }
+
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          setPushEnabled(true);
+          await registerPushToken();
+        } else {
+          Alert.alert(
+            'Permission Denied',
+            'To enable notifications, please allow them in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('[Notifications] Permission error:', error);
+      }
+    } else {
+      Alert.alert(
+        'Disable Notifications',
+        'To disable push notifications, go to your device settings.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Settings', 
-            onPress: () => {
-              Linking.openSettings();
-              setPushEnabled(true);
-            }
-          },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]
       );
-    } else {
-      setPushEnabled(false);
     }
   };
 
@@ -97,7 +148,7 @@ export default function NotificationsScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -112,13 +163,14 @@ export default function NotificationsScreen() {
                 <View style={styles.rowTextContainer}>
                   <Text style={styles.rowLabel}>Enable Notifications</Text>
                   <Text style={styles.rowDescription}>
-                    Receive push notifications
+                    {isExpoGo ? 'Requires development build' : 'Receive push notifications'}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={pushEnabled}
                 onValueChange={handleTogglePush}
+                disabled={!permissionChecked}
                 trackColor={{ false: 'rgba(0,0,0,0.1)', true: 'rgba(129, 1, 0, 0.3)' }}
                 thumbColor={pushEnabled ? TimelineColors.primary : '#f4f3f4'}
                 ios_backgroundColor="rgba(0,0,0,0.1)"
@@ -167,11 +219,84 @@ export default function NotificationsScreen() {
             {config.infoMessages.notifications}
           </Text>
         </View>
-        
+
+        {/* Test Button — remove for production */}
+        <Pressable
+          style={[styles.testButton, !pushEnabled && { opacity: 0.4 }]}
+          disabled={!pushEnabled}
+          onPress={async () => {
+            const { error } = await apiRequest('/api/config/test-notification', { method: 'POST' });
+            if (error) Alert.alert('Error', error);
+            else Alert.alert('Sent', 'Check your notification tray!');
+          }}
+        >
+          <Text style={styles.testButtonText}>Send Test Push Notification</Text>
+        </Pressable>
+
         <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+// Helper: get icon for notification type
+function getNotificationIcon(type: string) {
+  switch (type) {
+    case 'connection_request':
+    case 'connection_accepted':
+    case 'connection_ended':
+      return (
+        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"
+            stroke={TimelineColors.primary}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+            stroke={TimelineColors.primary}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'memory_shared':
+      return (
+        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"
+            stroke={TimelineColors.primary}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    default:
+      return <BellIcon size={18} />;
+  }
+}
+
+// Helper: relative timestamp
+function getRelativeTime(isoDate: string): string {
+  const now = Date.now();
+  const then = new Date(isoDate).getTime();
+  const diff = now - then;
+
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  return new Date(isoDate).toLocaleDateString();
 }
 
 // Icons
@@ -312,6 +437,13 @@ const styles = StyleSheet.create({
   sectionDisabled: {
     opacity: 0.5,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8 * SCALE,
+    marginHorizontal: 4 * SCALE,
+  },
   sectionTitle: {
     fontSize: 13 * SCALE,
     fontWeight: '600',
@@ -320,6 +452,11 @@ const styles = StyleSheet.create({
     marginLeft: 4 * SCALE,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  markAllReadText: {
+    fontSize: 12 * SCALE,
+    fontWeight: '500',
+    color: TimelineColors.primary,
   },
   card: {
     backgroundColor: '#FDFBF7',
@@ -379,6 +516,100 @@ const styles = StyleSheet.create({
     fontSize: 14 * SCALE,
     color: 'rgba(0,0,0,0.6)',
     lineHeight: 20 * SCALE,
+  },
+  // Notification center styles
+  emptyCard: {
+    backgroundColor: '#FDFBF7',
+    borderRadius: 16 * SCALE,
+    padding: 32 * SCALE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  emptyText: {
+    fontSize: 15 * SCALE,
+    fontWeight: '500',
+    color: TimelineColors.textDark,
+    marginTop: 12 * SCALE,
+  },
+  emptySubtext: {
+    fontSize: 13 * SCALE,
+    color: 'rgba(0,0,0,0.4)',
+    marginTop: 4 * SCALE,
+    textAlign: 'center',
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16 * SCALE,
+    paddingVertical: 14 * SCALE,
+    gap: 12 * SCALE,
+  },
+  notificationUnread: {
+    backgroundColor: 'rgba(129, 1, 0, 0.03)',
+  },
+  notificationIcon: {
+    width: 36 * SCALE,
+    height: 36 * SCALE,
+    borderRadius: 10 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 14 * SCALE,
+    fontWeight: '500',
+    color: TimelineColors.textDark,
+  },
+  notificationTitleUnread: {
+    fontWeight: '600',
+  },
+  notificationBody: {
+    fontSize: 13 * SCALE,
+    color: 'rgba(0,0,0,0.5)',
+    marginTop: 2 * SCALE,
+    lineHeight: 17 * SCALE,
+  },
+  notificationTime: {
+    fontSize: 11 * SCALE,
+    color: 'rgba(0,0,0,0.35)',
+    marginTop: 4 * SCALE,
+  },
+  unreadDot: {
+    width: 8 * SCALE,
+    height: 8 * SCALE,
+    borderRadius: 4 * SCALE,
+    backgroundColor: TimelineColors.primary,
+  },
+  clearButton: {
+    alignItems: 'center',
+    paddingVertical: 14 * SCALE,
+    marginTop: 12 * SCALE,
+  },
+  clearButtonText: {
+    fontSize: 13 * SCALE,
+    fontWeight: '500',
+    color: 'rgba(0,0,0,0.4)',
+  },
+  testButton: {
+    alignItems: 'center',
+    paddingVertical: 14 * SCALE,
+    paddingHorizontal: 24 * SCALE,
+    marginTop: 8 * SCALE,
+    backgroundColor: 'rgba(129, 1, 0, 0.08)',
+    borderRadius: 12 * SCALE,
+  },
+  testButtonText: {
+    fontSize: 14 * SCALE,
+    fontWeight: '600',
+    color: TimelineColors.primary,
   },
   bottomPadding: {
     height: 40 * SCALE,
