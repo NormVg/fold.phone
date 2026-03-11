@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "285871155192",
+    "project_id": "foldtao-e6cea",
+    "storage_bucket": "foldtao-e6cea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:285871155192:android:993cd40afdc173540cd80d",
+        "android_client_info": {
+          "package_name": "com.taohq.fold"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPgaEVoQiwtBblLznbdMoU9e6DExG4IQQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
