@@ -28,9 +28,9 @@
             class="px-8 py-4 rounded-2xl text-base font-semibold inline-block text-brand-charcoal/90 hover:text-brand-charcoal transition-all bg-white/70 backdrop-blur-sm border border-brand-charcoal/10 hover:bg-white hover:shadow-md">
             Download for Android
           </a>
-          <a href="https://admin.fold.taohq.org" target="_blank"
+          <a href="#join"
             class="bg-brand-red hover:bg-brand-red-light text-white px-8 py-4 rounded-2xl text-base font-semibold inline-block transition-colors shadow-lg shadow-brand-red/20">
-            Open Dashboard
+            Join the Waitlist
           </a>
         </div>
       </div>

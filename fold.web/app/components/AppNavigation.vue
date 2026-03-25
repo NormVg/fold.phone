@@ -4,11 +4,9 @@
       <img src="/img/fold-icon.png" alt="Fold"
         class="w-10 h-10 rounded-xl shadow-[0_8px_20px_-4px_rgba(129,1,0,0.5)]" />
     </div>
-    <div class="flex gap-4 items-center">
-      <button
-        class="text-brand-charcoal/90 text-[15px] font-bold hover:text-black transition-colors px-4 py-2 tracking-tight">
-        Get Early Access
-      </button>
-    </div>
+    <a href="#join"
+      class="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 bg-brand-red text-white hover:bg-brand-red-light shadow-sm hover:shadow-md active:scale-[0.97]">
+      Join Waitlist
+    </a>
   </nav>
 </template>
