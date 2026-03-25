@@ -1,8 +1,8 @@
 <template>
   <main
-    class="relative w-full h-[90vh] min-h-[600px] rounded-[30px] md:rounded-[48px] overflow-hidden shadow-2xl group isolate bg-background-dark mb-12">
+    class="relative w-full h-[90vh] min-h-[600px] rounded-[30px] md:rounded-[48px] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] group isolate bg-background-light mb-12 border border-black/5">
     <!-- Wave Animation Background -->
-    <div class="absolute inset-0 w-full h-full z-0 wave-wrapper">
+    <div class="absolute inset-0 w-full h-full z-0 wave-wrapper opacity-90">
       <div class="wave-background">
         <span class="wave-layer wave-layer-1"></span>
         <span class="wave-layer wave-layer-2"></span>
@@ -10,15 +10,15 @@
       </div>
       <!-- Lighter overlay gradients optimized for your color theme -->
       <div
-        class="absolute inset-0 bg-gradient-to-b from-background-dark/30 via-transparent to-background-dark/80 mix-blend-multiply pointer-events-none">
+        class="absolute inset-0 bg-gradient-to-b from-background-light/90 via-background-light/40 to-background-light/90 mix-blend-normal pointer-events-none">
       </div>
       <div
-        class="absolute inset-0 bg-gradient-to-t from-brand-red/10 via-transparent to-transparent mix-blend-overlay pointer-events-none">
+        class="absolute inset-0 bg-gradient-to-t from-brand-red/5 via-transparent to-transparent pointer-events-none">
       </div>
     </div>
 
     <!-- Content -->
-    <div class="relative z-10 flex flex-col justify-between h-full w-full p-6 md:p-10 lg:p-12 text-brand-cream">
+    <div class="relative z-10 flex flex-col justify-between h-full w-full p-6 md:p-10 lg:p-12 text-brand-charcoal">
       <!-- Navigation -->
       <AppNavigation />
 
@@ -26,18 +26,18 @@
       <section
         class="flex flex-col items-center justify-center text-center max-w-4xl mx-auto space-y-6 mt-12 md:mt-0 pointer-events-none flex-1">
         <h1
-          class="font-display italic text-5xl sm:text-7xl md:text-8xl lg:text-9xl leading-tight text-brand-cream drop-shadow-2xl pointer-events-auto">
+          class="font-display italic text-5xl sm:text-7xl md:text-8xl lg:text-9xl leading-tight text-brand-charcoal pointer-events-auto mix-blend-darken">
           {{ heroTitle }}
         </h1>
         <p
-          class="font-sans font-light text-base sm:text-lg md:text-xl lg:text-2xl text-brand-cream/90 max-w-2xl leading-relaxed drop-shadow-md pointer-events-auto">
+          class="font-sans font-medium text-base sm:text-lg md:text-xl lg:text-2xl text-brand-charcoal/80 max-w-2xl leading-relaxed pointer-events-auto mix-blend-darken">
           {{ heroDescription }}
         </p>
 
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 pt-8 w-full justify-center pointer-events-auto">
           <button v-for="action in heroActions" :key="action.text"
-            class="glass-button px-8 py-3.5 rounded-full text-sm sm:text-base font-medium min-w-[180px]"
+            class="glass-button px-8 py-3.5 rounded-full text-sm sm:text-base font-medium min-w-[180px] shadow-sm"
             @click="action.onClick">
             {{ action.text }}
           </button>
@@ -47,9 +47,9 @@
       <!-- Email Signup Form -->
       <div class="w-full flex flex-col items-center justify-end pb-4 md:pb-8 space-y-4 pointer-events-auto">
         <div class="w-full max-w-lg mx-auto relative">
-          <form class="relative group shadow-2xl" id="join" @submit.prevent="handleSubmit">
+          <form class="relative group shadow-lg shadow-brand-red/5" id="join" @submit.prevent="handleSubmit">
             <input v-model="email"
-              class="input-glass w-full rounded-full py-4 pl-6 pr-14 text-brand-cream font-medium placeholder-brand-cream/40 outline-none focus:ring-2 focus:ring-brand-red/50 focus:bg-background-dark/60 font-sans text-base transition-all"
+              class="input-glass w-full rounded-full py-4 pl-6 pr-14 text-brand-charcoal font-medium placeholder-brand-charcoal/40 outline-none focus:ring-2 focus:ring-brand-red/30 focus:bg-white/40 font-sans text-base transition-all bg-white/20"
               placeholder="Enter your email for early access" type="email" required :disabled="isSubmitting" />
             <button
               class="absolute right-1.5 top-1.5 bottom-1.5 bg-brand-red text-brand-cream rounded-full w-10 sm:w-11 h-10 sm:h-11 flex items-center justify-center hover:bg-brand-red-light transition-colors shadow-md disabled:opacity-50"
@@ -66,12 +66,12 @@
             <!-- Success Message -->
             <transition name="fade">
               <div v-if="success" class="absolute -bottom-8 left-0 right-0 text-center">
-                <p class="text-green-400 text-sm font-medium">✨ Thank you for joining our waitlist!</p>
+                <p class="text-green-600 text-sm font-medium">✨ Thank you for joining our waitlist!</p>
               </div>
             </transition>
           </form>
         </div>
-        <p class="font-sans text-xs sm:text-sm text-brand-cream/50 text-center max-w-sm pt-2">
+        <p class="font-sans text-xs sm:text-sm text-brand-charcoal/50 text-center max-w-sm pt-2">
           Join our newsletter for exclusive updates. No spam.
         </p>
       </div>
@@ -155,19 +155,20 @@ const handleSubmit = async () => {
 
 .wave-layer-1 {
   border-radius: 45%;
-  background: rgba(10, 10, 10, 1);
+  background: rgba(237, 234, 220, 1);
+  /* brand-cream */
   animation: wave-animate 8s linear infinite;
 }
 
 .wave-layer-2 {
   border-radius: 40%;
-  background: rgba(10, 10, 10, 0.6);
+  background: rgba(237, 234, 220, 0.6);
   animation: wave-animate 12s linear infinite;
 }
 
 .wave-layer-3 {
   border-radius: 42.5%;
-  background: rgba(10, 10, 10, 0.4);
+  background: rgba(237, 234, 220, 0.4);
   animation: wave-animate 16s linear infinite;
 }
 

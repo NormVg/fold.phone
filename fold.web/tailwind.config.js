@@ -11,13 +11,15 @@ export default {
     extend: {
       colors: {
         background: {
-          dark: '#0a0a0a',
+          light: '#EDEADC', // Main organic cream background
+          dark: '#F4F2E8',  // Slightly darker cream for cards/sections
+          charcoal: '#181717', // Main text color
         },
         brand: {
           cream: '#EDEADC',
           red: '#810100',
           'red-light': '#a50201',
-          charcoal: '#1a1a1a',
+          charcoal: '#181717',
         }
       },
       fontFamily: {
