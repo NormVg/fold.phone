@@ -19,9 +19,10 @@
       <!-- Navigation -->
       <AppNavigation />
 
-      <!-- Hero Card -->
+      <!-- Hero Card — deep layered shadow + inner glow -->
       <div
-        class="w-full max-w-[900px] mx-auto bg-white/50 backdrop-blur-2xl rounded-[32px] md:rounded-[48px] border border-white/60 shadow-[0_8px_60px_-12px_rgba(0,0,0,0.12)] px-8 md:px-14 py-10 md:py-14 text-center space-y-6 mt-16 mb-8">
+        class="hero-card w-full max-w-[900px] mx-auto bg-white/50 backdrop-blur-2xl rounded-[32px] md:rounded-[48px] border border-white/50 px-8 md:px-14 py-10 md:py-14 text-center space-y-6 mt-16 mb-8 transition-shadow duration-500 hover:shadow-[0_20px_80px_-16px_rgba(129,1,0,0.15),0_8px_32px_-8px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]"
+        style="box-shadow: 0 12px_70px -16px rgba(0,0,0,0.18), 0 4px 24px -6px rgba(0,0,0,0.08), inset 0 1px 0 0 rgba(255,255,255,0.5), inset 0 -1px 3px 0 rgba(0,0,0,0.02);">
         <h1
           class="font-display italic text-5xl sm:text-6xl md:text-8xl lg:text-[110px] leading-[1.05] text-brand-charcoal tracking-tight">
           Unfold Your<br />Story
@@ -31,23 +32,30 @@
           {{ heroDescription }}
         </p>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons — lift on hover -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center pt-2">
           <button v-for="action in heroActions" :key="action.text"
-            class="px-8 py-3.5 rounded-2xl text-sm sm:text-base font-semibold min-w-[200px] transition-all duration-200 bg-white/70 backdrop-blur-sm border border-brand-charcoal/10 text-brand-charcoal/90 hover:bg-white hover:shadow-md hover:border-brand-charcoal/20 active:scale-[0.98]"
+            class="px-8 py-3.5 rounded-2xl text-sm sm:text-base font-semibold min-w-[200px] transition-all duration-300 bg-white/80 backdrop-blur-sm border border-brand-charcoal/8 text-brand-charcoal/90 hover:bg-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+            style="box-shadow: 0 2px 8px -2px rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.04), inset 0 1px 0 0 rgba(255,255,255,0.8);"
+            @mouseover="$event.target.style.boxShadow = '0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 6px 0 rgba(0,0,0,0.06), inset 0 1px 0 0 rgba(255,255,255,0.9)'"
+            @mouseleave="$event.target.style.boxShadow = '0 2px 8px -2px rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.04), inset 0 1px 0 0 rgba(255,255,255,0.8)'"
             @click="action.onClick">
             {{ action.text }}
           </button>
         </div>
 
-        <!-- Email Signup -->
+        <!-- Email Signup — recessed inset field -->
         <div class="w-full max-w-md mx-auto pt-2">
           <form class="relative" id="join" @submit.prevent="handleSubmit">
             <input v-model="email"
-              class="w-full rounded-2xl py-3.5 pl-6 pr-14 text-brand-charcoal font-medium placeholder-brand-charcoal/35 outline-none font-sans text-sm transition-all duration-200 bg-white/60 backdrop-blur-lg border border-brand-charcoal/8 shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.1)] focus:shadow-[0_4px_28px_-4px_rgba(0,0,0,0.12)] focus:border-brand-charcoal/15 focus:bg-white/80"
-              placeholder="Enter your email for early access" type="email" required :disabled="isSubmitting" />
+              class="w-full rounded-2xl py-3.5 pl-6 pr-14 text-brand-charcoal font-medium placeholder-brand-charcoal/35 outline-none font-sans text-sm transition-all duration-300 bg-white/60 backdrop-blur-lg border border-brand-charcoal/6 focus:border-brand-charcoal/15 focus:bg-white/80"
+              style="box-shadow: inset 0 2px 6px -2px rgba(0,0,0,0.06), 0 1px 2px 0 rgba(0,0,0,0.03);"
+              placeholder="Enter your email for early access" type="email" required :disabled="isSubmitting"
+              @focus="$event.target.style.boxShadow = 'inset 0 2px 6px -2px rgba(0,0,0,0.04), 0 4px 20px -4px rgba(129,1,0,0.08)'"
+              @blur="$event.target.style.boxShadow = 'inset 0 2px 6px -2px rgba(0,0,0,0.06), 0 1px 2px 0 rgba(0,0,0,0.03)'" />
             <button
-              class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-brand-red text-white rounded-xl w-9 h-9 flex items-center justify-center hover:bg-brand-red-light transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 active:scale-95"
+              class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-brand-red text-white rounded-xl w-9 h-9 flex items-center justify-center transition-all duration-300 disabled:opacity-50 active:scale-90 hover:scale-105"
+              style="box-shadow: 0 4px 12px -2px rgba(129,1,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.15);"
               type="submit" :disabled="isSubmitting || !email">
               <span v-if="isSubmitting"
                 class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
