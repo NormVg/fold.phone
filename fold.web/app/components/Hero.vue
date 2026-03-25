@@ -1,8 +1,7 @@
 <template>
-  <main
-    class="relative w-full h-[90vh] min-h-[600px] rounded-[30px] md:rounded-[48px] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] group isolate bg-background-light mb-12 border border-black/5">
+  <main class="relative w-full h-screen min-h-[700px] overflow-hidden group isolate bg-background-light">
     <!-- Wave Animation Background -->
-    <div class="absolute inset-0 w-full h-full z-0 wave-wrapper opacity-90">
+    <div class="absolute inset-x-0 bottom-0 h-3/4 w-full z-0 wave-wrapper opacity-[0.85]">
       <div class="wave-background">
         <span class="wave-layer wave-layer-1"></span>
         <span class="wave-layer wave-layer-2"></span>
@@ -10,7 +9,7 @@
       </div>
       <!-- Lighter overlay gradients optimized for your color theme -->
       <div
-        class="absolute inset-0 bg-gradient-to-b from-background-light/90 via-background-light/40 to-background-light/90 mix-blend-normal pointer-events-none">
+        class="absolute inset-0 bg-gradient-to-b from-background-light via-background-light/50 to-transparent mix-blend-normal pointer-events-none">
       </div>
       <div
         class="absolute inset-0 bg-gradient-to-t from-brand-red/5 via-transparent to-transparent pointer-events-none">
@@ -18,7 +17,7 @@
     </div>
 
     <!-- Content -->
-    <div class="relative z-10 flex flex-col justify-between h-full w-full p-6 md:p-10 lg:p-12 text-brand-charcoal">
+    <div class="relative z-10 flex flex-col justify-between h-full w-full pt-32 pb-8 px-6 md:px-12 text-brand-charcoal">
       <!-- Navigation -->
       <AppNavigation />
 
@@ -26,18 +25,18 @@
       <section
         class="flex flex-col items-center justify-center text-center max-w-4xl mx-auto space-y-6 mt-12 md:mt-0 pointer-events-none flex-1">
         <h1
-          class="font-display italic text-5xl sm:text-7xl md:text-8xl lg:text-9xl leading-tight text-brand-charcoal pointer-events-auto mix-blend-darken">
-          {{ heroTitle }}
+          class="font-display italic text-6xl sm:text-7xl md:text-[140px] leading-[1.05] md:leading-[1.1] text-brand-charcoal pointer-events-auto mix-blend-darken -tracking-wide">
+          Unfold Your<br />Story
         </h1>
         <p
-          class="font-sans font-medium text-base sm:text-lg md:text-xl lg:text-2xl text-brand-charcoal/80 max-w-2xl leading-relaxed pointer-events-auto mix-blend-darken">
+          class="font-sans font-medium text-lg sm:text-xl md:text-2xl text-brand-charcoal/80 max-w-3xl leading-relaxed pointer-events-auto mix-blend-darken pt-4">
           {{ heroDescription }}
         </p>
 
         <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-4 pt-8 w-full justify-center pointer-events-auto">
+        <div class="flex flex-col sm:flex-row gap-6 w-full justify-center pointer-events-auto pt-6">
           <button v-for="action in heroActions" :key="action.text"
-            class="glass-button px-8 py-3.5 rounded-full text-sm sm:text-base font-medium min-w-[180px] shadow-sm"
+            class="input-glass px-8 py-4 rounded-full text-sm sm:text-base font-medium min-w-[200px] shadow-sm hover:shadow-md transition-all text-brand-charcoal/90 hover:text-brand-charcoal hover:bg-black/5"
             @click="action.onClick">
             {{ action.text }}
           </button>
@@ -45,21 +44,22 @@
       </section>
 
       <!-- Email Signup Form -->
-      <div class="w-full flex flex-col items-center justify-end pb-4 md:pb-8 space-y-4 pointer-events-auto">
-        <div class="w-full max-w-lg mx-auto relative">
-          <form class="relative group shadow-lg shadow-brand-red/5" id="join" @submit.prevent="handleSubmit">
+      <div
+        class="w-full flex flex-col items-center justify-end pb-2 md:pb-6 space-y-4 pointer-events-auto relative z-20">
+        <div class="w-full max-w-xl mx-auto relative mt-8">
+          <form class="relative group" id="join" @submit.prevent="handleSubmit">
             <input v-model="email"
-              class="input-glass w-full rounded-full py-4 pl-6 pr-14 text-brand-charcoal font-medium placeholder-brand-charcoal/40 outline-none focus:ring-2 focus:ring-brand-red/30 focus:bg-white/40 font-sans text-base transition-all bg-white/20"
+              class="input-glass w-full rounded-full py-4 pl-8 pr-16 text-brand-charcoal font-medium placeholder-brand-charcoal/40 outline-none focus:ring-2 focus:ring-brand-charcoal/10 font-sans text-base transition-all bg-white/20 shadow-md hover:shadow-lg focus:shadow-xl"
               placeholder="Enter your email for early access" type="email" required :disabled="isSubmitting" />
             <button
-              class="absolute right-1.5 top-1.5 bottom-1.5 bg-brand-red text-brand-cream rounded-full w-10 sm:w-11 h-10 sm:h-11 flex items-center justify-center hover:bg-brand-red-light transition-colors shadow-md disabled:opacity-50"
+              class="absolute right-2 top-2 bottom-2 bg-[#CB9F9E] text-white rounded-full w-10 sm:w-11 h-10 sm:h-11 flex items-center justify-center hover:bg-[#b88c8b] transition-all shadow-sm hover:shadow-md disabled:opacity-50"
               type="submit" :disabled="isSubmitting || !email">
               <span v-if="isSubmitting"
-                class="w-4 h-4 border-2 border-brand-cream border-t-transparent rounded-full animate-spin"></span>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                  d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
-                  clip-rule="evenodd" />
+                class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
               </svg>
             </button>
 

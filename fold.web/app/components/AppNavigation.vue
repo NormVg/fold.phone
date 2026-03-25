@@ -1,18 +1,13 @@
 <template>
-  <nav class="w-full flex justify-between items-center z-50 pt-2 pb-6">
+  <nav class="absolute top-0 w-full flex justify-between items-center z-50 pt-8 pb-6 px-6 md:px-12">
     <div class="flex items-center gap-2">
-      <div class="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center shadow-lg shadow-brand-red/20">
-        <span class="text-brand-cream font-bold text-lg leading-none">F</span>
+      <div
+        class="w-10 h-10 rounded-xl bg-[#810100] flex items-center justify-center shadow-[0_8px_16px_rgba(129,1,0,0.3)]">
+        <span class="text-[#EDEADC] font-bold text-xl leading-none">F</span>
       </div>
-      <span class="text-brand-cream font-display italic text-2xl font-medium tracking-tight">Fold</span>
     </div>
     <div class="flex gap-4 items-center">
-      <a href="https://admin.fold.taohq.org" target="_blank"
-        class="text-sm font-medium text-brand-cream/80 hover:text-brand-cream transition-colors hidden sm:block">
-        Sign In
-      </a>
-      <button
-        class="bg-brand-cream text-brand-charcoal px-5 py-2 rounded-full text-sm font-semibold hover:bg-white transition-colors">
+      <button class="text-brand-charcoal/90 text-sm font-bold hover:text-black transition-colors px-2 py-2">
         Get Early Access
       </button>
     </div>
