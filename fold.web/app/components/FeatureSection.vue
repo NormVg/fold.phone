@@ -1,5 +1,5 @@
 <template>
-  <section class="w-full max-w-6xl mx-auto px-6 py-24 md:py-32">
+  <section id="features" class="w-full max-w-6xl mx-auto px-6 py-24 md:py-32">
     <div class="text-center mb-20 space-y-4">
       <h2 class="font-display italic text-4xl md:text-5xl text-brand-charcoal">
         Designed for Permanence
