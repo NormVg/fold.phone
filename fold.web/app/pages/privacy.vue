@@ -24,7 +24,7 @@
       <div class="prose-section space-y-6 text-brand-charcoal/80 leading-relaxed">
         <section class="space-y-3">
           <h2 class="text-xl font-semibold text-brand-charcoal">Your Privacy Matters</h2>
-          <p>At Fold, your privacy is not just a feature — it's the foundation. We built Fold to be a private sanctuary
+          <p>At Fold, your privacy is not just a feature - it's the foundation. We built Fold to be a private sanctuary
             for your memories, and we take that promise seriously.</p>
         </section>
 
@@ -64,8 +64,9 @@
 
         <section class="space-y-3">
           <h2 class="text-xl font-semibold text-brand-charcoal">Contact</h2>
-          <p>If you have questions about this privacy policy, reach out to us at <a href="mailto:privacy@fold.taohq.org"
-              class="text-brand-red hover:underline">privacy@fold.taohq.org</a>.</p>
+          <p>If you have questions about this privacy policy, reach out to us at <a
+              href="mailto:thealphaones.work@gmail.com"
+              class="text-brand-red hover:underline">thealphaones.work@gmail.com</a>.</p>
         </section>
       </div>
     </article>
