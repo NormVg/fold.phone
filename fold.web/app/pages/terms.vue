@@ -39,7 +39,7 @@
 
         <section class="space-y-3">
           <h2 class="text-xl font-semibold text-brand-charcoal">Your Content</h2>
-          <p>You retain full ownership of all content you create in Fold — your memories, text, photos, voice memos, and
+          <p>You retain full ownership of all content you create in Fold - your memories, text, photos, voice memos, and
             emotions. We do not claim any intellectual property rights over your content.</p>
           <p>You grant us a limited license to store and process your content solely for the purpose of providing the
             Fold service to you.</p>
@@ -76,8 +76,8 @@
 
         <section class="space-y-3">
           <h2 class="text-xl font-semibold text-brand-charcoal">Contact</h2>
-          <p>Questions about these terms? Contact us at <a href="mailto:legal@fold.taohq.org"
-              class="text-brand-red hover:underline">legal@fold.taohq.org</a>.</p>
+          <p>Questions about these terms? Contact us at <a href="mailto:thealphaones.work@gmail.com"
+              class="text-brand-red hover:underline">thealphaones.work@gmail.com</a>.</p>
         </section>
       </div>
     </article>
