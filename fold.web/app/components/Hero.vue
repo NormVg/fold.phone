@@ -91,7 +91,7 @@ const heroActions = [
   {
     text: "Watch the Film",
     onClick: () => {
-      console.log("Watch film clicked")
+      window.open("https://www.instagram.com/reel/DT0clHhCvU7/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==", "_blank")
     }
   },
   {
