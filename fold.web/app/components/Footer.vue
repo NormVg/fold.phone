@@ -20,7 +20,7 @@
         <div class="space-y-4">
           <h4 class="text-brand-charcoal font-semibold text-sm tracking-wide uppercase">Product</h4>
           <ul class="space-y-2.5">
-            <li><a href="#"
+            <li><a href="#features"
                 class="text-brand-charcoal/50 hover:text-brand-charcoal transition-colors text-sm">Features</a></li>
             <li><a href="https://admin.fold.taohq.org/download"
                 class="text-brand-charcoal/50 hover:text-brand-charcoal transition-colors text-sm">Download APK</a></li>
@@ -50,7 +50,7 @@
           <h4 class="text-brand-charcoal font-semibold text-sm tracking-wide uppercase">Connect</h4>
           <div class="flex gap-3">
             <!-- Instagram -->
-            <a href="https://instagram.com/fold.app" target="_blank" rel="noopener"
+            <a href="https://instagram.com/fold.tao" target="_blank" rel="noopener"
               class="w-9 h-9 rounded-xl bg-brand-charcoal/5 hover:bg-brand-charcoal/10 flex items-center justify-center transition-colors group">
               <svg class="w-[18px] h-[18px] text-brand-charcoal/50 group-hover:text-brand-charcoal transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -61,7 +61,7 @@
               </svg>
             </a>
             <!-- YouTube -->
-            <a href="https://youtube.com/@fold" target="_blank" rel="noopener"
+            <a href="https://youtube.com/@fusewithfold" target="_blank" rel="noopener"
               class="w-9 h-9 rounded-xl bg-brand-charcoal/5 hover:bg-brand-charcoal/10 flex items-center justify-center transition-colors group">
               <svg class="w-[18px] h-[18px] text-brand-charcoal/50 group-hover:text-brand-charcoal transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -72,7 +72,7 @@
               </svg>
             </a>
             <!-- Twitter/X -->
-            <a href="https://twitter.com/thealphaones" target="_blank" rel="noopener"
+            <a href="https://x.com/TheNormVg" target="_blank" rel="noopener"
               class="w-9 h-9 rounded-xl bg-brand-charcoal/5 hover:bg-brand-charcoal/10 flex items-center justify-center transition-colors group">
               <svg class="w-[18px] h-[18px] text-brand-charcoal/50 group-hover:text-brand-charcoal transition-colors"
                 viewBox="0 0 24 24" fill="currentColor">
