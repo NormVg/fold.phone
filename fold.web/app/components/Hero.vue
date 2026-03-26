@@ -1,6 +1,6 @@
 <template>
   <main class="relative w-full min-h-screen overflow-hidden bg-background-light">
-    <!-- Wave Animation Background — FULL SCREEN behind everything -->
+    <!-- Wave Animation Background - FULL SCREEN behind everything -->
     <div class="absolute inset-0 w-full h-full z-0 wave-wrapper">
       <div class="wave-background">
         <span class="wave-layer wave-layer-1"></span>
@@ -19,7 +19,7 @@
       <!-- Navigation -->
       <AppNavigation />
 
-      <!-- Hero Card — deep layered shadow + inner glow -->
+      <!-- Hero Card - deep layered shadow + inner glow -->
       <div
         class="hero-card w-full max-w-[900px] mx-auto bg-white/50 backdrop-blur-2xl rounded-[32px] md:rounded-[48px] border border-white/50 px-8 md:px-14 py-10 md:py-14 text-center space-y-6 mt-16 mb-8 transition-shadow duration-500 hover:shadow-[0_20px_80px_-16px_rgba(129,1,0,0.15),0_8px_32px_-8px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]"
         style="box-shadow: 0 12px_70px -16px rgba(0,0,0,0.18), 0 4px 24px -6px rgba(0,0,0,0.08), inset 0 1px 0 0 rgba(255,255,255,0.5), inset 0 -1px 3px 0 rgba(0,0,0,0.02);">
@@ -32,7 +32,7 @@
           {{ heroDescription }}
         </p>
 
-        <!-- Action Buttons — lift on hover -->
+        <!-- Action Buttons - lift on hover -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center pt-2">
           <button v-for="action in heroActions" :key="action.text"
             class="px-8 py-3.5 rounded-2xl text-sm sm:text-base font-semibold min-w-[200px] transition-all duration-300 bg-white/80 backdrop-blur-sm border border-brand-charcoal/8 text-brand-charcoal/90 hover:bg-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
@@ -44,7 +44,7 @@
           </button>
         </div>
 
-        <!-- Email Signup — recessed inset field -->
+        <!-- Email Signup - recessed inset field -->
         <div class="w-full max-w-md mx-auto pt-2">
           <form class="relative" id="join" @submit.prevent="handleSubmit">
             <input v-model="email"
@@ -65,17 +65,17 @@
                 <path d="m12 5 7 7-7 7"></path>
               </svg>
             </button>
-
-            <transition name="fade">
-              <div v-if="success" class="absolute -bottom-7 left-0 right-0 text-center">
-                <p class="text-green-700 text-xs font-medium">✨ Thank you for joining our waitlist!</p>
-              </div>
-            </transition>
           </form>
 
-          <p class="font-sans text-[11px] text-brand-charcoal/35 text-center pt-3">
-            Join our newsletter for exclusive updates. No spam.
-          </p>
+          <div class="h-6 mt-3 flex items-center justify-center text-center">
+            <transition name="fade" mode="out-in">
+              <p v-if="success" class="text-green-700 text-[13px] font-medium">✨ Thank you for joining our waitlist!</p>
+              <p v-else-if="errorMessage" class="text-brand-red text-[13px] font-medium">{{ errorMessage }}</p>
+              <p v-else class="font-sans text-[11px] text-brand-charcoal/35">
+                Join our newsletter for exclusive updates. No spam.
+              </p>
+            </transition>
+          </div>
         </div>
       </div>
     </div>
@@ -105,15 +105,39 @@ const heroActions = [
 const email = ref('')
 const isSubmitting = ref(false)
 const success = ref(false)
+const errorMessage = ref('')
 
 const handleSubmit = async () => {
   if (!email.value) return
   isSubmitting.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  isSubmitting.value = false
-  success.value = true
-  email.value = ''
-  setTimeout(() => { success.value = false }, 4000)
+  success.value = false
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch('https://crm.taohq.org/api/waitlist/fold-tao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: email.value })
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      success.value = true
+      email.value = ''
+      setTimeout(() => { success.value = false }, 5000)
+    } else {
+      errorMessage.value = data.error || data.message || "Something went wrong. Please try again."
+      setTimeout(() => { errorMessage.value = '' }, 5000)
+    }
+  } catch (error) {
+    errorMessage.value = "Network error. Please try again."
+    setTimeout(() => { errorMessage.value = '' }, 5000)
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -127,6 +151,7 @@ const handleSubmit = async () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  border-radius: 0 0 25px 25px;
 }
 
 .wave-background {
